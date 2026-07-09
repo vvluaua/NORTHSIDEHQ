@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Northside HQ — Business Operating System</title>
+<meta name="description" content="Internal operating system for Northside Web.">
+<style>
+/* ============================================================
+   NORTHSIDE HQ — Design System
+   Palette: deep harbour night, signal blue → sea-glass teal
+   Zero external dependencies. Everything below is hand-rolled.
+   ============================================================ */
+:root{
+  --bg:#0B0E14; --bg2:#10141D; --bg3:#161B26; --bg4:#1C2230;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+  --text:#E8EBF2; --muted:#8B93A7; --dim:#5A6275;
+  --acc:#6E9BFF; --acc2:#55E0C8;
+  --grad:linear-gradient(135deg,#6E9BFF,#55E0C8);
+  --green:#4ADE80; --amber:#FFC24B; --red:#FF6B6B; --purple:#B49BFF; --pink:#FF8FB1;
+  --glass:rgba(22,27,38,.72);
+  --shadow:0 8px 32px rgba(0,0,0,.45);
+  --r:14px; --r-sm:9px; --r-lg:20px;
+  --font:"Avenir Next","Segoe UI Variable Display","Segoe UI",Inter,system-ui,-apple-system,sans-serif;
+  --mono:"SF Mono","Cascadia Code","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --sidebar-w:232px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+body::before{ /* ambient aurora, fixed, very subtle */
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 500px at 85% -10%,rgba(110,155,255,.09),transparent 60%),
+    radial-gradient(700px 420px at -10% 110%,rgba(85,224,200,.06),transparent 60%);
+}
+::selection{background:rgba(110,155,255,.35)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#252c3c;border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+button{font-family:inherit;color:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit;color:var(--text);font-size:14px}
+a{color:var(--acc);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+/* ---------- Layout shell ---------- */
+.app{display:flex;min-height:100vh;position:relative;z-index:1}
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;position:fixed;top:0;bottom:0;left:0;
+  background:rgba(13,16,24,.85);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:50;
+  padding:18px 12px 12px;overflow-y:auto;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 16px}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;background:var(--grad);
+  display:grid;place-items:center;font-weight:800;font-size:16px;color:#0B0E14;
+  box-shadow:0 4px 16px rgba(110,155,255,.35);flex-shrink:0;position:relative;
+}
+.brand-mark svg{width:19px;height:19px}
+.brand h1{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.brand small{display:block;font-size:10.5px;color:var(--dim);font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.nav-group{margin-bottom:14px}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);padding:8px 12px 5px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;
+  border-radius:var(--r-sm);color:var(--muted);font-size:13.5px;font-weight:500;
+  transition:background .15s,color .15s;position:relative;text-align:left;
+}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.85}
+.nav-item:hover{background:rgba(255,255,255,.045);color:var(--text)}
+.nav-item.active{background:rgba(110,155,255,.12);color:var(--text)}
+.nav-item.active::before{
+  content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;border-radius:0 3px 3px 0;background:var(--grad);
+}
+.nav-count{margin-left:auto;font-size:10.5px;font-family:var(--mono);color:var(--dim);
+  background:rgba(255,255,255,.05);padding:1px 7px;border-radius:20px}
+.sidebar-foot{margin-top:auto;padding:12px 10px 4px;border-top:1px solid var(--line);font-size:11px;color:var(--dim)}
+.sidebar-foot .kbd-hint{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+
+.main{flex:1;margin-left:var(--sidebar-w);min-width:0;padding:0 28px 80px}
+.topbar{
+  position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;
+  padding:14px 0 12px;margin:0 -28px 22px;padding-left:28px;padding-right:28px;
+  background:rgba(11,14,20,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+}
+.topbar h2{font-size:19px;font-weight:700;letter-spacing:-.02em}
+.topbar .date{font-size:12px;color:var(--muted)}
+.top-search{
+  margin-left:auto;display:flex;align-items:center;gap:8px;
+  background:var(--bg3);border:1px solid var(--line);border-radius:10px;
+  padding:7px 12px;min-width:220px;color:var(--muted);font-size:13px;
+  transition:border-color .15s;
+}
+.top-search:hover{border-color:var(--line2)}
+.streak-pill{
+  display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(255,194,75,.14),rgba(255,107,107,.1));
+  border:1px solid rgba(255,194,75,.25);border-radius:20px;padding:5px 13px;
+  font-size:12.5px;font-weight:600;color:var(--amber);white-space:nowrap;
+}
+
+kbd{
+  font-family:var(--mono);font-size:10.5px;background:var(--bg4);border:1px solid var(--line2);
+  border-bottom-width:2px;border-radius:5px;padding:1.5px 6px;color:var(--muted);
+}
+
+/* ---------- Cards & primitives ---------- */
+.card{
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  padding:18px;transition:transform .2s cubic-bezier(.2,.8,.2,1),border-color .2s,box-shadow .2s;
+  position:relative;
+}
+.card.hoverable:hover{transform:translateY(-2px);border-color:var(--line2);box-shadow:var(--shadow)}
+.card h3{font-size:15px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+.card .sub{font-size:12.5px;color:var(--muted)}
+.glass{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.section-title{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin:26px 0 12px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:10px;
+  font-size:13px;font-weight:600;background:var(--bg3);border:1px solid var(--line2);
+  color:var(--text);transition:all .15s;
+}
+.btn:hover{background:var(--bg4);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.primary{background:var(--grad);color:#0B0E14;border:none;box-shadow:0 4px 14px rgba(110,155,255,.3)}
+.btn.primary:hover{box-shadow:0 6px 20px rgba(110,155,255,.42)}
+.btn.danger{color:var(--red);border-color:rgba(255,107,107,.3)}
+.btn.sm{padding:5px 11px;font-size:12px;border-radius:8px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.icon-btn{width:28px;height:28px;display:inline-grid;place-items:center;border-radius:7px;color:var(--muted);transition:all .12s}
+.icon-btn:hover{background:rgba(255,255,255,.07);color:var(--text)}
+.icon-btn svg{width:14px;height:14px}
+
+.input,textarea.input,select.input{
+  width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:10px;
+  padding:9px 12px;font-size:13.5px;transition:border-color .15s,box-shadow .15s;
+}
+.input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(110,155,255,.15)}
+.input::placeholder{color:var(--dim)}
+select.input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B93A7' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+label.fld{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2.5px 9px;border-radius:20px;white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-blue{background:rgba(110,155,255,.13);color:var(--acc)}
+.b-green{background:rgba(74,222,128,.12);color:var(--green)}
+.b-amber{background:rgba(255,194,75,.12);color:var(--amber)}
+.b-red{background:rgba(255,107,107,.12);color:var(--red)}
+.b-purple{background:rgba(180,155,255,.13);color:var(--purple)}
+.b-grey{background:rgba(255,255,255,.07);color:var(--muted)}
+.b-teal{background:rgba(85,224,200,.12);color:var(--acc2)}
+.badge.no-dot::before{display:none}
+
+/* progress bars */
+.bar{height:6px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;position:relative}
+.bar>i{display:block;height:100%;border-radius:4px;background:var(--grad);transition:width .6s cubic-bezier(.2,.8,.2,1);position:relative}
+.bar>i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);transform:translateX(-100%);animation:shimmer 2.4s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+.bar.green>i{background:var(--green)}.bar.amber>i{background:var(--amber)}.bar.red>i{background:var(--red)}
+
+/* stat tiles */
+.stat{padding:16px 18px}
+.stat .k{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px}
+.stat .v{font-size:27px;font-weight:750;letter-spacing:-.03em;font-family:var(--mono);margin:5px 0 2px;font-variant-numeric:tabular-nums}
+.stat .d{font-size:12px;color:var(--muted)}
+.stat .v .unit{font-size:14px;color:var(--muted);font-weight:500}
+
+/* checkboxes */
+.chk{display:flex;align-items:flex-start;gap:11px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:background .12s;user-select:none}
+.chk:hover{background:rgba(255,255,255,.035)}
+.chk .box{
+  width:18px;height:18px;flex-shrink:0;margin-top:1px;border-radius:6px;border:1.5px solid var(--line2);
+  display:grid;place-items:center;transition:all .18s cubic-bezier(.3,1.4,.5,1);background:var(--bg);
+}
+.chk .box svg{width:11px;height:11px;stroke:#0B0E14;stroke-width:3;fill:none;stroke-dasharray:16;stroke-dashoffset:16;transition:stroke-dashoffset .25s .05s}
+.chk.done .box{background:var(--grad);border-color:transparent;transform:scale(1.05)}
+.chk.done .box svg{stroke-dashoffset:0}
+.chk .txt{font-size:13.5px;transition:color .2s}
+.chk .why{display:block;font-size:12px;color:var(--dim);margin-top:1px}
+.chk.done .txt{color:var(--dim);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+
+/* accordions */
+.acc{border:1px solid var(--line);border-radius:var(--r);background:var(--bg2);margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.acc:hover{border-color:var(--line2)}
+.acc-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;user-select:none;width:100%;text-align:left}
+.acc-head h4{font-size:14px;font-weight:650;flex:1}
+.acc-head .chev{width:16px;height:16px;color:var(--dim);transition:transform .25s;flex-shrink:0}
+.acc.open .chev{transform:rotate(90deg)}
+.acc-body{display:none;padding:2px 18px 16px;border-top:1px solid var(--line)}
+.acc.open .acc-body{display:block;animation:fadeSlide .25s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.acc-body p{font-size:13.5px;color:#C4CAD8;margin:10px 0}
+.acc-body strong{color:var(--text)}
+.acc-body ul,.acc-body ol{margin:8px 0 8px 20px;font-size:13.5px;color:#C4CAD8}
+.acc-body li{margin:4px 0}
+.acc-body h5{font-size:12.5px;font-weight:700;color:var(--acc);margin:14px 0 4px;letter-spacing:.02em}
+
+.script-block{
+  background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--acc);
+  border-radius:10px;padding:13px 15px;margin:10px 0;font-size:13.5px;color:#D5DAE5;
+  white-space:pre-wrap;position:relative;line-height:1.6;
+}
+.script-block .copy-btn{position:absolute;top:8px;right:8px;opacity:0;transition:opacity .15s}
+.script-block:hover .copy-btn{opacity:1}
+
+/* progress ring */
+.ring-wrap{position:relative;display:grid;place-items:center}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:rgba(255,255,255,.07);stroke-width:8}
+.ring-fg{fill:none;stroke:url(#gradRing);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.ring-center{position:absolute;text-align:center}
+.ring-center .rv{font-size:26px;font-weight:750;font-family:var(--mono);letter-spacing:-.02em}
+.ring-center .rk{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+.tbl th:hover{color:var(--muted)}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tbody tr{transition:background .12s;cursor:pointer}
+.tbl tbody tr:hover{background:rgba(255,255,255,.03)}
+
+/* modal */
+.modal-veil{position:fixed;inset:0;background:rgba(5,7,11,.7);backdrop-filter:blur(6px);z-index:100;display:grid;place-items:center;animation:veilIn .2s ease;padding:20px}
+@keyframes veilIn{from{opacity:0}to{opacity:1}}
+.modal{
+  width:min(620px,100%);max-height:86vh;overflow-y:auto;background:var(--bg2);
+  border:1px solid var(--line2);border-radius:var(--r-lg);padding:24px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);animation:modalIn .25s cubic-bezier(.2,.9,.3,1.1);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:16px}
+.modal .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal .fgroup{margin-bottom:13px}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+
+/* command palette */
+.cmdk{position:fixed;inset:0;background:rgba(5,7,11,.6);backdrop-filter:blur(8px);z-index:200;display:flex;justify-content:center;padding-top:14vh;animation:veilIn .15s ease}
+.cmdk-box{width:min(560px,92%);height:fit-content;max-height:60vh;background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--line2);border-radius:16px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.65);animation:modalIn .2s cubic-bezier(.2,.9,.3,1.1);display:flex;flex-direction:column}
+.cmdk-input{display:flex;align-items:center;gap:11px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.cmdk-input svg{width:17px;height:17px;color:var(--dim);flex-shrink:0}
+.cmdk-input input{flex:1;background:none;border:none;outline:none;font-size:15px}
+.cmdk-list{overflow-y:auto;padding:8px}
+.cmdk-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 12px;border-radius:9px;font-size:13.5px;color:var(--muted);transition:none}
+.cmdk-item svg{width:15px;height:15px;flex-shrink:0}
+.cmdk-item.sel{background:rgba(110,155,255,.14);color:var(--text)}
+.cmdk-item .hint{margin-left:auto;font-size:11px;color:var(--dim)}
+.cmdk-empty{padding:26px;text-align:center;color:var(--dim);font-size:13px}
+.cmdk-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:8px 12px 4px}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.toast{
+  background:var(--bg3);border:1px solid var(--line2);border-radius:11px;padding:11px 16px;
+  font-size:13px;font-weight:500;box-shadow:var(--shadow);display:flex;align-items:center;gap:9px;
+  animation:toastIn .3s cubic-bezier(.2,.9,.3,1.15);
+}
+.toast svg{width:15px;height:15px;color:var(--acc2)}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.toast.out{animation:toastOut .25s ease forwards}
+@keyframes toastOut{to{opacity:0;transform:translateY(8px)}}
+
+/* notes */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.note{
+  border-radius:var(--r);padding:15px;min-height:150px;display:flex;flex-direction:column;
+  border:1px solid var(--line);transition:transform .18s,box-shadow .18s;position:relative;
+}
+.note:hover{transform:translateY(-3px) rotate(-.4deg);box-shadow:var(--shadow)}
+.note.pinned{border-color:rgba(255,194,75,.4)}
+.note .note-head{display:flex;gap:4px;justify-content:flex-end;margin-bottom:4px;opacity:0;transition:opacity .15s}
+.note:hover .note-head{opacity:1}
+.note textarea{flex:1;background:none;border:none;outline:none;resize:none;font-size:13px;line-height:1.5;color:inherit}
+.note .note-date{font-size:10.5px;opacity:.55;margin-top:8px;font-family:var(--mono)}
+.n-slate{background:var(--bg3)} .n-blue{background:rgba(110,155,255,.1)} .n-teal{background:rgba(85,224,200,.09)}
+.n-amber{background:rgba(255,194,75,.09)} .n-purple{background:rgba(180,155,255,.1)} .n-pink{background:rgba(255,143,177,.08)}
+
+/* pipeline / kanban chips */
+.pipe-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:8px}
+.pipe-col{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:10px;min-height:80px}
+.pipe-col h6{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;display:flex;justify-content:space-between}
+.pipe-card{background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,transform .15s}
+.pipe-card:hover{border-color:var(--acc);transform:translateX(2px)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:4px;width:fit-content;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:7px 15px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg4);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* flow diagram */
+.flow{display:flex;flex-direction:column;gap:0}
+.flow-stage{display:flex;gap:16px;position:relative;padding-bottom:8px}
+.flow-rail{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.flow-dot{width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1.5px solid var(--line2);display:grid;place-items:center;font-size:11px;font-weight:700;font-family:var(--mono);color:var(--muted);z-index:1;transition:all .2s}
+.flow-stage.done .flow-dot{background:var(--grad);color:#0B0E14;border-color:transparent}
+.flow-line{width:2px;flex:1;background:var(--line);min-height:14px}
+.flow-stage.done .flow-line{background:linear-gradient(var(--acc),var(--acc2))}
+.flow-body{flex:1;padding-bottom:14px}
+
+/* misc */
+.empty{text-align:center;padding:44px 20px;color:var(--dim)}
+.empty svg{width:36px;height:36px;margin-bottom:10px;opacity:.5}
+.empty p{font-size:13px}
+.chip-row{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
+.chip{font-size:12px;padding:4px 11px;border-radius:20px;background:var(--bg3);border:1px solid var(--line);color:var(--muted);transition:all .13s;cursor:pointer}
+.chip:hover,.chip.on{border-color:var(--acc);color:var(--acc);background:rgba(110,155,255,.09)}
+.quote-card{padding:22px;text-align:center}
+.quote-card p{font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.5;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.quote-card .qa{font-size:12px;color:var(--dim);margin-top:8px;-webkit-text-fill-color:var(--dim)}
+.diff-dots{display:inline-flex;gap:3px}
+.diff-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.12)}
+.diff-dots i.f1{background:var(--green)}.diff-dots i.f2{background:var(--amber)}.diff-dots i.f3{background:var(--red)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:38px}
+.spark i{flex:1;background:linear-gradient(to top,rgba(110,155,255,.5),rgba(85,224,200,.7));border-radius:3px 3px 0 0;min-height:3px;transition:height .5s cubic-bezier(.2,.8,.2,1)}
+.hidden{display:none!important}
+.page{display:none;animation:pageIn .3s cubic-bezier(.2,.8,.2,1)}
+.page.active{display:block}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.mut{color:var(--muted)} .sm{font-size:12.5px} .xs{font-size:11.5px} .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.flex{display:flex;align-items:center;gap:10px} .between{justify-content:space-between} .wrap{flex-wrap:wrap}
+.mt{margin-top:14px}.mb{margin-bottom:14px}
+
+/* mobile */
+.menu-btn{display:none}
+@media (max-width:1080px){ .g4{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(2,1fr)} .pipe-row{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:760px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);width:260px}
+  .sidebar.open{transform:none;box-shadow:0 0 60px rgba(0,0,0,.6)}
+  .main{margin-left:0;padding:0 16px 60px}
+  .topbar{margin:0 -16px 18px;padding-left:16px;padding-right:16px}
+  .menu-btn{display:inline-grid}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .pipe-row{grid-template-columns:repeat(2,1fr)}
+  .top-search{min-width:0;flex:1}
+  .top-search .ts-txt{display:none}
+  .modal .row2{grid-template-columns:1fr}
+  .streak-pill span.lbl{display:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6E9BFF"/><stop offset="100%" stop-color="#55E0C8"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0B0E14" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6"/><path d="M6 12l6-6 6 6"/></svg>
+      </div>
+      <div><h1>Northside HQ</h1><small>Business OS</small></div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-foot">
+      <div class="kbd-hint"><kbd>⌘K</kbd> command palette</div>
+      <div class="kbd-hint"><kbd>1–9</kbd> jump to section</div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div>
+        <h2 id="pageTitle">Dashboard</h2>
+        <div class="date" id="todayDate"></div>
+      </div>
+      <button class="top-search" id="searchBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span class="ts-txt">Search everything…</span>
+        <kbd style="margin-left:auto">⌘K</kbd>
+      </button>
+      <div class="streak-pill" id="streakPill" title="Consecutive days you've opened HQ">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4-3 5.5-3 9a3 3 0 006 0c0-1.5-.7-2.5-1-3 3 1 5 4 5 7a7 7 0 01-14 0c0-6 5-8 7-13z"/></svg>
+        <span id="streakNum">1</span><span class="lbl">day streak</span>
+      </div>
+    </div>
+
+    <div id="pages">
+      <div class="page" id="page-dashboard"></div>
+      <div class="page" id="page-checklist"></div>
+      <div class="page" id="page-coldcalling"></div>
+      <div class="page" id="page-sales"></div>
+      <div class="page" id="page-build"></div>
+      <div class="page" id="page-audit"></div>
+      <div class="page" id="page-crm"></div>
+      <div class="page" id="page-followups"></div>
+      <div class="page" id="page-marketing"></div>
+      <div class="page" id="page-leads"></div>
+      <div class="page" id="page-notes"></div>
+      <div class="page" id="page-resources"></div>
+      <div class="page" id="page-templates"></div>
+      <div class="page" id="page-lessons"></div>
+      <div class="page" id="page-finance"></div>
+      <div class="page" id="page-motivation"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div id="modalRoot"></div>
+<div id="cmdkRoot"></div>
+
+<script>
+/* ============================================================
+   NORTHSIDE HQ — Application code
+   Structure:
+     1. State  — one localStorage-backed store
+     2. Utils  — dom helpers, toast, modal, icons
+     3. Data   — all content libraries (checklists, scripts, ...)
+     4. Pages  — one render function per section
+     5. Shell  — nav, routing, command palette, keyboard
+   ============================================================ */
+'use strict';
+
+/* ---------- 1. STATE ---------- */
+const STORE_KEY = 'northside_hq_v1';
+const defaultState = () => ({
+  goals: {
+    weeklyRevenue: 3000, monthlyRevenue: 10000, weeklyCalls: 50, dailyCalls: 10,
+    weeklyDemos: 3, dreamIncome: 20000, why: "Build a design studio we're proud of, own our time, and never build someone else's dream again."
+  },
+  focus: { text: '', date: '' },                 // today's single focus
+  daily: {},                                     // { 'YYYY-MM-DD': {calls, demos, worked} }
+  checklist: {},                                 // { itemId: true }
+  buildFlows: {},                                // { projectName: {stageIdx: {taskIdx:true}} } simplified: { 'default': {...} }
+  buildChecks: {},                               // { 'stage-task': true }
+  auditChecks: {}, auditClient: '',
+  clients: [],                                   // CRM records
+  notes: [],
+  finance: { entries: [], avgPrice: 1500 },      // entries: {id,type:'income'|'expense',label,amount,date}
+  milestones: {},                                // reward milestones ticked
+  streak: { last: '', count: 0 },
+  callLog: [],                                   // {date, outcome}
+  seeded: false,
+});
+let S;
+try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); }
+catch(e){ S = defaultState(); }
+const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e){ console.warn('Save failed', e); } };
+
+const todayKey = () => new Date().toISOString().slice(0,10);
+const day = () => { if(!S.daily[todayKey()]) S.daily[todayKey()] = {calls:0, demos:0, meetings:0, worked:true}; return S.daily[todayKey()]; };
+
+/* streak: increments once per calendar day opened */
+(function trackStreak(){
+  const t = todayKey();
+  if (S.streak.last !== t) {
+    const y = new Date(Date.now() - 864e5).toISOString().slice(0,10);
+    S.streak.count = (S.streak.last === y) ? S.streak.count + 1 : 1;
+    S.streak.last = t;
+    day(); save();
+  }
+})();
+
+/* ---------- 2. UTILS ---------- */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt$ = n => '$' + Number(n||0).toLocaleString('en-AU', {maximumFractionDigits:0});
+const uid = () => Math.random().toString(36).slice(2,9);
+const clamp = (n,a,b) => Math.min(b, Math.max(a,n));
+const pct = (a,b) => b > 0 ? Math.round(a/b*100) : 0;
+
+const I = { /* inline icon set — stroke style, 24 viewbox */
+  home:'<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 2 .7 2.9a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.9.6 2.9.7a2 2 0 011.7 2z"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  hammer:'<path d="M15 12l-8.5 8.5a2.1 2.1 0 01-3-3L12 9"/><path d="M17.6 3.4L21 6.7l-2.3 2.3a2 2 0 01-2.8 0l-.5-.5a2 2 0 010-2.8z"/><path d="M14 6l-3 3"/>',
+  scan:'<path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M7 12h10"/>',
+  users:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>',
+  bell:'<path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>',
+  megaphone:'<path d="M3 11l18-7v18l-18-7v-4z"/><path d="M7 15v4a2 2 0 004 0v-3"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M16 8l-2.5 5.5L8 16l2.5-5.5z"/>',
+  note:'<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
+  grad:'<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/>',
+  dollar:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+  flame:'<path d="M12 2c1 4-3 5.5-3 9a3 3 0 006 0c0-1.5-.7-2.5-1-3 3 1 5 4 5 7a7 7 0 01-14 0c0-6 5-8 7-13z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  trash:'<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>',
+  edit:'<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/>',
+  pin:'<path d="M12 17v5M9 10.8V5a3 3 0 016 0v5.8l2 3.2H7z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  arrow:'<path d="M9 18l6-6-6-6"/>',
+  spark:'<path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/>',
+  x:'<path d="M18 6L6 18M6 6l12 12"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  mail:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+  zap:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
+  shield:'<path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+};
+const icon = (name, size=16) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[name]||I.spark}</svg>`;
+
+function toast(msg){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = icon('check',15) + esc(msg);
+  $('#toastWrap').appendChild(t);
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(), 260); }, 2400);
+}
+function copyText(text, msg='Copied to clipboard'){
+  const doToast = () => toast(msg);
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(doToast).catch(()=>fallbackCopy(text, doToast));
+  else fallbackCopy(text, doToast);
+}
+function fallbackCopy(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb&&cb(); }catch(e){}
+  ta.remove();
+}
+function openModal(html){
+  const root = $('#modalRoot');
+  root.innerHTML = `<div class="modal-veil" id="veil"><div class="modal">${html}</div></div>`;
+  $('#veil').addEventListener('mousedown', e => { if(e.target.id==='veil') closeModal(); });
+}
+const closeModal = () => { $('#modalRoot').innerHTML = ''; };
+
+function ring(percent, size=120, label='', value=null){
+  const r = (size-10)/2, c = 2*Math.PI*r, off = c*(1-clamp(percent,0,100)/100);
+  return `<div class="ring-wrap" style="width:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}">
+      <circle class="ring-bg" cx="${size/2}" cy="${size/2}" r="${r}"/>
+      <circle class="ring-fg" cx="${size/2}" cy="${size/2}" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+    </svg>
+    <div class="ring-center"><div class="rv">${value !== null ? value : percent+'%'}</div><div class="rk">${label}</div></div>
+  </div>`;
+}
+const bar = (p, cls='') => `<div class="bar ${cls}"><i style="width:${clamp(p,0,100)}%"></i></div>`;
+const diffDots = n => `<span class="diff-dots">${[1,2,3].map(i=>`<i class="${i<=n?'f'+n:''}"></i>`).join('')}</span>`;
+const scriptBlock = (text) => `<div class="script-block">${esc(text)}<button class="btn sm ghost copy-btn" onclick="copyText(this.parentElement.childNodes[0].textContent.trim())">${icon('copy',12)} Copy</button></div>`;
+</script>
+<script>
+/* ---------- 3. DATA LIBRARIES ---------- */
+
+/* ===== MASTER CHECKLIST — the "build a real agency" list ===== */
+const CHECKLIST = [
+{cat:'Business Setup', icon:'shield', items:[
+  ['Register an ABN (free via Australian Business Register)','You cannot invoice legally without one.'],
+  ['Decide structure: sole trader vs partnership vs company','Partnership needs a written partnership agreement — even between friends. Especially between friends.'],
+  ['Open a separate business bank account','Mixing personal and business money is the #1 bookkeeping disaster for new agencies.'],
+  ['Write a one-page partnership agreement','Cover: ownership split, who does what, how profit is split, what happens if one person wants out.'],
+  ['Register northsideweb domain + business email','you@northsideweb… beats gmail for trust on cold outreach.'],
+  ['Set up a shared password manager','Client logins pile up fast. Never store them in a notes app.'],
+  ['Get public liability insurance quote','Cheap for web work; some commercial clients require it.'],
+  ['Create a shared drive folder structure','Clients / Leads / Templates / Finance / Brand. Decide it once, never think again.'],
+]},
+{cat:'Sales', icon:'target', items:[
+  ['Write and rehearse the 20-second opener out loud, 20 times','Confidence is rehearsal, not personality.'],
+  ['Define your qualification criteria (who is worth a demo)','Building demos for unqualified leads is how you go broke doing free work.'],
+  ['Set your prices BEFORE the first sales call','Deciding price mid-call guarantees you undercharge.'],
+  ['Build objection flashcards for the top 8 objections','Practise until the answers are boring to you.'],
+  ['Create the demo presentation flow (screen share or in person)','Never just email a demo link cold — present it live.'],
+  ['Decide your walk-away price','Know the number below which the job costs you money.'],
+  ['Set a weekly call quota and track it publicly between partners','What gets measured gets done. What gets seen gets done faster.'],
+  ['Write the "no obligation" explanation word-for-word','It is your best weapon. It must sound natural, not scripted.'],
+]},
+{cat:'Marketing', icon:'megaphone', items:[
+  ['Build the Northside Web site as your best portfolio piece','Your own site IS the pitch. It must be better than anything local competitors show.'],
+  ['Claim + fully complete Google Business Profile','Web agencies with no Google presence are ironic and easy to dismiss.'],
+  ['Set up Instagram + LinkedIn with 9 posts before promoting','An empty profile kills credibility instantly.'],
+  ['Write 3 case-study one-pagers (even from demo builds)','Before/after screenshots convert better than any copy.'],
+  ['Create a referral offer (e.g. $200 or a month of maintenance)','Referrals close 3–5x higher than cold leads.'],
+  ['Design a one-page leave-behind PDF for in-person visits','Something physical survives longer than a phone call memory.'],
+],},
+{cat:'Lead Generation', icon:'search', items:[
+  ['Build a 100-business hit list from Google Maps','Filter: no website, broken site, or sub-4-star listings with old sites.'],
+  ['Score every lead: A (perfect fit), B (maybe), C (someday)','Call A leads first while you have morning energy.'],
+  ['Note the owner\'s name before every call','"Can I speak to Dave?" gets past gatekeepers. "Can I speak to the owner?" does not.'],
+  ['Check each lead\'s reviews for personality clues','Owners who reply to reviews care about their image — best buyers.'],
+  ['Set up a lead source tracker (where did each lead come from?)','You will double down on what works only if you know what works.'],
+  ['Drive one suburb per week and photograph shopfronts with no web presence','Local + visual beats any directory scrape.'],
+]},
+{cat:'Client Communication', icon:'mail', items:[
+  ['Write your onboarding email template','Sets expectations: timeline, what you need from them, how revisions work.'],
+  ['Decide response-time promise (e.g. within 1 business day)','Then beat it. Speed is the cheapest way to feel premium.'],
+  ['Create a weekly progress update template','Silent agencies get anxious clients. Anxious clients become difficult clients.'],
+  ['Set boundaries: no scope changes by text message','All change requests in writing, always.'],
+  ['Prepare the "bad news" script (delays, problems)','Deliver bad news early, with a plan attached. Never hide.'],
+]},
+{cat:'Portfolio', icon:'spark', items:[
+  ['Ship 3 flagship demo sites in different industries','Café, tradie, professional service — covers 80% of local pitches.'],
+  ['Record 30-second screen videos of each build','Motion sells design better than screenshots.'],
+  ['Get written permission to display client work','Ask at launch when goodwill is highest.'],
+  ['Write the process story for each project','Clients buy the process as much as the pixels.'],
+]},
+{cat:'Website Building', icon:'hammer', items:[
+  ['Build a reusable starter template (header/footer/contact/SEO base)','Your margin lives in reuse. Never start from a blank file.'],
+  ['Create a component library (buttons, cards, forms, sections)','Consistency + speed.'],
+  ['Define your standard stack and hosting setup','Decide once: builder vs hand-coded, host, DNS, forms, analytics.'],
+  ['Write your pre-launch QA checklist','Links, forms, mobile, speed, favicon, 404, SSL, metadata.'],
+  ['Set an internal speed budget (e.g. loads < 2s on mobile)','"Fast" is a selling point only if you can prove it.'],
+]},
+{cat:'Legal', icon:'shield', items:[
+  ['Get a simple service agreement template reviewed','One page beats none. Cover scope, payment, IP transfer on final payment, revision limits.'],
+  ['Add a clause: content delays pause the timeline','Late client content is the #1 cause of project drift.'],
+  ['Understand Australian Consumer Law basics for services','Guarantees apply to you whether you mention them or not.'],
+  ['Add privacy policy + terms templates to client builds','Required if their site collects any personal info.'],
+  ['Keep copyright of demo builds until purchase','The free demo stays yours until they buy — say so politely in writing.'],
+]},
+{cat:'Pricing', icon:'dollar', items:[
+  ['Set 3 packages: Starter / Growth / Premium','Three options anchor value. One option invites haggling.'],
+  ['Price includes a specific number of revisions (e.g. 2 rounds)','Unlimited revisions is how projects never end.'],
+  ['Create a monthly care plan (hosting, edits, backups)','Recurring revenue is what keeps agencies alive between projects.'],
+  ['Never quote on the spot — "I\'ll send a proposal today"','Quoted-on-the-spot prices are always too low.'],
+  ['Raise prices after every 3 closed deals until resistance','You are underpriced until someone says no because of price.'],
+]},
+{cat:'Contracts & Invoices', icon:'note', items:[
+  ['Take a deposit (30–50%) before build work begins','A client with money down is a committed client. Demos excluded — that\'s the model.'],
+  ['Invoice template with ABN, terms, bank details, due date','7-day terms for small jobs. 14 max.'],
+  ['Set an automatic late-payment follow-up rhythm (day 1, 7, 14)','Polite, immediate, consistent. Awkwardness costs money.'],
+  ['Final files/handover only after final payment clears','Non-negotiable. Every agency learns this once, expensively.'],
+]},
+{cat:'Branding', icon:'spark', items:[
+  ['Lock the Northside logo, colours, and type','Then stop fiddling with it. Your brand is your work, not your logo.'],
+  ['Write a one-line positioning statement','"Premium websites for Northern Beaches businesses — see yours free before you pay a cent."'],
+  ['Create branded proposal + invoice documents','Every document is a design sample.'],
+  ['Consistent email signatures for both partners','Name, role, phone, site link, one-line offer.'],
+]},
+{cat:'Social Media', icon:'megaphone', items:[
+  ['Post one before/after transformation per week','The single highest-converting content type for web agencies.'],
+  ['Film "we rebuilt this local site in 48 hours" reels','Local + timelapse + result = shares.'],
+  ['Comment genuinely on local business posts daily (10 min)','Warm familiarity before the cold call.'],
+  ['Batch a month of content in one afternoon','Daily posting kills momentum; batching protects it.'],
+]},
+{cat:'SEO', icon:'search', items:[
+  ['Learn local SEO basics: GBP, citations, reviews, on-page','Local SEO is 90% of what your clients actually need.'],
+  ['Add a "web design northern beaches" page to your own site','Rank for your own service or your pitch rings hollow.'],
+  ['Create an SEO add-on package to upsell','Every closed website should be offered an SEO phase.'],
+  ['Set up rank tracking for your own keywords','Free tools are fine to start.'],
+]},
+{cat:'Analytics & Google', icon:'chart', items:[
+  ['Install analytics on every site you ship (yours first)','"Your new site got 400 visits this month" is a retention email that writes itself.'],
+  ['Set up Google Search Console for every client','Free data, looks professional in reports.'],
+  ['Build a simple monthly client report template','Traffic, top pages, enquiries. One page. Screenshots.'],
+]},
+{cat:'Email & Automation', icon:'zap', items:[
+  ['Set up email templates for the 8 common situations','Follow-up, proposal, onboarding, update, launch, review ask, referral ask, invoice chase.'],
+  ['Create a shared inbox or alias (hello@)','Both partners see every client thread.'],
+  ['Automate the review request 7 days after launch','Timing beats wording.'],
+  ['Calendar link for booking demo calls','Remove every step between "interested" and "booked".'],
+]},
+{cat:'Systems & Operations', icon:'compass', items:[
+  ['Run a Monday 30-min partner standup: pipeline, builds, blockers','The partnership dies quietly without a rhythm of communication.'],
+  ['Timebox demo builds to a fixed limit (e.g. 4 hours)','The free demo model only works if demos are cheap for you to make.'],
+  ['Write down every process the second time you do it','First time is discovery. Second time is a system.'],
+  ['Weekly backup habit for all client work','One lost site erases a year of reputation.'],
+]},
+{cat:'Finance & Bookkeeping', icon:'dollar', items:[
+  ['Track every dollar in and out from day one (Finance tab)','Agencies rarely die of bad design. They die of invisible cash flow.'],
+  ['Put aside 30% of every payment for tax immediately','GST registration required once turnover passes $75k.'],
+  ['Set a monthly "minimum to survive" number','Know your floor so you know when to panic — and when not to.'],
+  ['Reconcile finances on the 1st of every month, together','Money transparency is partnership insurance.'],
+]},
+{cat:'Tax', icon:'shield', items:[
+  ['Book one hour with an accountant before EOFY','One conversation now saves thousands later.'],
+  ['Keep receipts for software, hardware, travel, home office','Deductions only exist if documented.'],
+  ['Understand PSI (personal services income) rules','Affects how agency income can be split — worth knowing early.'],
+]},
+{cat:'Scaling & Growth', icon:'chart', items:[
+  ['Document the full client journey end-to-end','You can only delegate what is written down.'],
+  ['Identify your first hire or contractor role','Usually: content/copy, then dev overflow, then sales.'],
+  ['Raise average project value before raising volume','Fewer, bigger, better clients beats a churn treadmill.'],
+  ['Build the maintenance book to cover fixed costs','When recurring revenue pays the bills, you can take creative risks.'],
+  ['Niche review at 20 clients: which industry loved you most?','Specialists charge double what generalists do.'],
+]},
+{cat:'Future Ideas', icon:'spark', items:[
+  ['Productise: fixed-price "site in a week" offer',''],
+  ['Local business web workshops (lead gen + authority)',''],
+  ['White-label builds for marketing agencies',''],
+  ['Template marketplace income stream',''],
+  ['Hosting reseller margin on every client',''],
+]},
+];
+
+/* ===== BUILD WORKFLOW — 18 stages ===== */
+const BUILD_FLOW = [
+{stage:'Lead found', tasks:['Add to CRM with source noted','Score A/B/C priority','Find owner name + direct contact','Check they meet qualification criteria']},
+{stage:'Research', tasks:['Read every Google review (what customers praise/complain about)','Note their services, hours, service area','Screenshot their socials','Identify their obvious customer type','Find 1 personal detail for rapport (sponsorships, story, awards)']},
+{stage:'Audit existing website', tasks:['Run the Audit tab checklist against their current site','Screenshot the 3 worst problems','Test on your phone — record if painful','Note load time on mobile data','Save findings to their CRM record']},
+{stage:'Research competitors', tasks:['Find their top 3 local competitors','Note who ranks #1 on Google Maps and why','Screenshot the best competitor site','List 3 things the demo must beat']},
+{stage:'Collect inspiration', tasks:['Save 3–5 reference sites in their industry','Pick the emotional tone (premium? friendly? fast?)','Choose imagery direction (their photos vs stock)','Confirm colour direction from their existing brand']},
+{stage:'Build sitemap', tasks:['List every page (keep demos to 3–5 pages)','Define the ONE action each page drives','Plan the nav — 5 items max','Decide what goes above the fold on home']},
+{stage:'Wireframe', tasks:['Sketch home page blocks (paper is fine)','Order sections by persuasion: hook → proof → offer → action','Place a call-to-action every 1.5 screens','Mobile layout first']},
+{stage:'Prototype', tasks:['Block out the site with real structure, grey content','Use their real business name + services from day one','Get partner feedback before polishing']},
+{stage:'Design', tasks:['Apply type, colour, spacing system','Use their real photos where possible (or shoot some)','Write conversion-focused copy — never lorem ipsum in demos','One signature moment per site (hero animation, gallery, map)']},
+{stage:'Development', tasks:['Build from the starter template','Optimise every image before upload','Working contact form (goes to YOUR email during demo)','Click-to-call phone number','Embedded map + hours']},
+{stage:'QA', tasks:['Test all links and forms','Test on iPhone, Android, desktop','Run speed test — under 2s mobile target','Spellcheck everything, especially their business name','Check favicon, page titles, meta descriptions']},
+{stage:'Presentation', tasks:['Book a time — never just send a link','Present on YOUR device or a screen share','Show mobile version first (that\'s where their customers are)','Show the audit "before" next to the demo "after"','Ask: "Honestly — what do you think?" then be quiet']},
+{stage:'Revision', tasks:['Capture all feedback in writing','Agree revision scope before touching the build','Deliver revisions fast — within 48h keeps heat in the deal']},
+{stage:'Close', tasks:['Present price with the package options','Handle objections (Sales tab)','Get verbal yes → send agreement same hour','Deposit paid (or full payment for demo purchase)','Celebrate. Log it. Ring the bell.']},
+{stage:'Launch', tasks:['Connect their domain + SSL','Point forms to THEIR email','Submit sitemap to Google Search Console','Test everything live','Send launch email with logins + how-to video']},
+{stage:'SEO', tasks:['On-page basics: titles, descriptions, headings, alt text','Google Business Profile linked + consistent NAP','Suggest the SEO add-on package','Set baseline: current rankings screenshot']},
+{stage:'Analytics', tasks:['Install analytics + verify data flows','Set up enquiry/conversion tracking','Schedule the 30-day report']},
+{stage:'Maintenance', tasks:['Offer the care plan at launch (highest acceptance moment)','Ask for a Google review at day 7','Ask for a referral at day 30','Diary a 6-month check-in call']},
+];
+
+/* ===== AUDIT TEMPLATE ===== */
+const AUDIT = [
+{area:'Speed & performance', checks:['Loads under 3s on mobile data','Images compressed and properly sized','No render-blocking junk (huge sliders, autoplay video)','Passes a PageSpeed test above 60 mobile','Server responds quickly (no cheap-host lag)']},
+{area:'Mobile responsiveness', checks:['No horizontal scrolling on a phone','Tap targets big enough for thumbs','Text readable without zooming','Menu usable one-handed','Forms usable on mobile']},
+{area:'Typography & design', checks:['Max 2 font families','Readable line length and contrast','Consistent heading hierarchy','Looks designed this decade','Whitespace — not crammed edge to edge']},
+{area:'Accessibility', checks:['Alt text on meaningful images','Sufficient colour contrast','Site usable by keyboard','Form fields properly labelled']},
+{area:'SEO fundamentals', checks:['Unique title + meta description per page','One H1 per page describing the service + area','Location keywords present naturally','No "index.html" style URLs / clean structure','Sitemap exists']},
+{area:'Navigation & structure', checks:['5 or fewer top-level nav items','Phone number visible without scrolling','Logo links home','No dead-end pages','Clear path: land → understand → contact within 2 clicks']},
+{area:'Calls to action', checks:['Primary CTA above the fold','CTA repeats down the page','Buttons say what happens ("Get a free quote"), not "Submit"','Click-to-call on mobile']},
+{area:'Forms', checks:['Contact form actually works (test it!)','Asks 5 fields or fewer','Confirmation message after sending','Enquiries clearly reach the owner']},
+{area:'Branding & trust', checks:['Consistent logo/colours with their signage & socials','Real photos of the business, team, or work','About page with a human story','ABN / address / years in business visible','Professional email (not gmail) displayed']},
+{area:'Content quality', checks:['Copy written for customers, not the owner\'s ego','Services clearly listed with plain names','Pricing or "from" pricing where sensible','No walls of text','Updated recently (check copyright year!)']},
+{area:'Social proof', checks:['Testimonials or review widgets present','Google rating referenced','Before/after or portfolio evidence','Trust badges only where real']},
+{area:'Google presence', checks:['Google Business Profile claimed and complete','Ranks for "[service] + [suburb]"','NAP (name, address, phone) matches everywhere','Reviews replied to','Maps embed on contact page']},
+{area:'Security & tech', checks:['HTTPS with valid certificate','No browser security warnings','No broken links (crawl or click through)','404 page exists and helps','Site backed up (ask them — they won\'t know)']},
+];
+
+/* ===== LEAD GENERATION METHODS (ranked) ===== */
+const LEADGEN = [
+{m:'Google Maps sweep', diff:1, conv:3, how:'Search "[industry] + [suburb]". Open every listing. No website link, a Facebook-only link, or a site that screams 2012 = onto the hit list. Note owner name from review replies. 30 minutes = 20 qualified leads. This is your bread and butter — the businesses are proven real, local, and findable.'},
+{m:'Walk / drive the shopping strips', diff:1, conv:3, how:'Physically visit local strips. Photograph shopfronts, grab business cards, chat if it\'s quiet. "I build websites for Northern Beaches businesses — do you have one?" In-person cold approach converts far higher than phone because you\'re instantly human. Best for cafés, barbers, retail.'},
+{m:'New business registrations', diff:2, conv:3, how:'New businesses NEED a website and haven\'t chosen anyone yet. Watch for: new fitouts and "opening soon" signage, council development approvals, new Google listings with 0 reviews, new Instagram accounts for local shops. Reach out with a congratulations first, offer second.'},
+{m:'Referrals from closed clients', diff:1, conv:3, how:'Highest conversion channel that exists. Ask at day 30 post-launch: "Who else do you know that needs this?" Offer $200 or a free month of care plan per referral that closes. One happy tradie knows fifty other tradies.'},
+{m:'Facebook local groups & Marketplace', diff:1, conv:2, how:'Join every Northern Beaches community + buy/sell group. Businesses self-identify constantly ("check out my new mobile dog wash!"). Anyone promoting without a website is a warm lead. Also answer "can anyone recommend a web designer" posts within minutes — speed wins those.'},
+{m:'Instagram local hashtags', diff:1, conv:2, how:'Search #northernbeachesbusiness, suburb tags, industry tags. Businesses active on IG but with linkin.bio-only presence often want a real site but were burned by quotes. Engage genuinely for a week before pitching.'},
+{m:'Tradies (builders, plumbers, sparkies, landscapers)', diff:2, conv:3, how:'The single best niche for this model: cashed up, busy, hate computers, judged by professionalism, and their competitors\' sites are terrible. Find via Google Maps, hipages profiles without websites, and ute signage. Pitch angle: "your quality deserves better than a Facebook page."'},
+{m:'Restaurants & cafés', diff:1, conv:2, how:'Easy to find, visual industry where a beautiful demo lands hard. Pitch menu + bookings + Instagram feed integration. Lower budgets than tradies but great portfolio pieces and high referral density (owners all know each other).'},
+{m:'Dentists, physio, allied health', diff:2, conv:2, how:'Higher budgets, care about trust and booking flow. Longer sales cycles, often gatekeepered by practice managers — build the relationship with the manager, they usually decide anyway.'},
+{m:'Real estate & law firms', diff:3, conv:1, how:'Big budgets but slow, committee-driven decisions and existing agency relationships. Park these for year two unless one falls in your lap.'},
+{m:'Gyms, PTs, studios', diff:1, conv:2, how:'Image-driven, always marketing, often running on a linktree. Pitch class timetables + sign-up flow. Owners are reachable directly on Instagram DMs.'},
+{m:'Barbers, salons, beauty', diff:1, conv:2, how:'Booking-driven businesses — pitch "a site that fills your calendar." Visual demos with their own Instagram photos are almost unfair.'},
+{m:'Mechanics & auto', diff:2, conv:2, how:'Almost universally awful websites, steady demand. Pitch: quote request form + services + reviews. You know cars — use it for instant rapport.'},
+{m:'LinkedIn local outreach', diff:2, conv:1, how:'Works for B2B services (consultants, brokers, agencies). Connect with a personal note referencing their business, not a pitch. Slow burn — treat as a background channel.'},
+{m:'Yellow Pages / local directories', diff:1, conv:1, how:'Businesses paying for directory listings but with no site have marketing budget and outdated strategy. Decent list-building source, weaker conversion than Maps because data is stale.'},
+{m:'Chamber of commerce & networking events', diff:2, conv:2, how:'Northern Beaches business networks, BNI-style groups. You will be the youngest and most technical people in the room — that\'s the advantage. Referral flywheel, not instant sales.'},
+{m:'Partnerships with adjacent services', diff:2, conv:3, how:'Accountants, bookkeepers, signwriters, printers, photographers, marketing freelancers — they meet business owners at exactly the "getting serious" moment. Offer 10–15% referral commission. Five good partners = a quiet lead machine.'},
+];
+
+/* ===== RESOURCES ===== */
+const RESOURCES = [
+{cat:'Design inspiration', items:[['Awwwards','awwwards.com — award-winning site gallery'],['Godly','godly.website — astronomically good web design'],['Landbook','land-book.com — landing page gallery'],['Mobbin','mobbin.com — real app/site UI patterns'],['SaaS Landing Page','saaslandingpage.com — section-by-section examples'],['Minimal Gallery','minimal.gallery — restrained, premium work'],['Dark Mode Design','darkmodedesign.com — dark UI showcase']]},
+{cat:'Fonts & typography', items:[['Google Fonts','fonts.google.com — free, licensed for client work'],['Fontshare','fontshare.com — free professional-grade faces'],['Fontpair','fontpair.co — pairing suggestions'],['Typescale','typescale.com — build a type scale in seconds'],['Modern Font Stacks','modernfontstacks.com — zero-download system stacks']]},
+{cat:'Colour', items:[['Realtime Colors','realtimecolors.com — preview palettes on a real layout'],['Coolors','coolors.co — palette generator'],['Radix Colors','radix-ui.com/colors — accessible colour scales'],['UI Colors','uicolors.app — generate full Tailwind-style scales']]},
+{cat:'Icons & assets', items:[['Lucide','lucide.dev — clean open-source icons'],['Phosphor','phosphoricons.com — flexible icon family'],['Heroicons','heroicons.com — polished UI icons'],['unDraw','undraw.co — free brand-colourable illustrations'],['SVGRepo','svgrepo.com — huge free SVG library']]},
+{cat:'Stock photos & video', items:[['Unsplash','unsplash.com — free high-quality photos'],['Pexels','pexels.com — photos + free stock video'],['Mixkit','mixkit.co — free video clips and music'],['Pravatar / UI Faces','for placeholder people in mockups only']]},
+{cat:'SEO & performance tools', items:[['PageSpeed Insights','pagespeed.web.dev — Google\'s speed report (use in audits!)'],['GTmetrix','gtmetrix.com — waterfall + speed grading'],['Google Search Console','search.google.com/search-console — free ranking data'],['Screaming Frog','free crawler for broken links + meta issues'],['TinyPNG / Squoosh','image compression — squoosh.app is free and local']]},
+{cat:'AI tools', items:[['Claude','claude.ai — copywriting, code, proposals, research'],['v0 / Bolt style tools','rapid UI prototyping for demo concepts'],['Remove.bg','background removal for client photos'],['Upscayl','free local image upscaler for bad client photos']]},
+{cat:'Animation & interaction', items:[['Animista','animista.net — CSS animation generator'],['Cubic-bezier','cubic-bezier.com — easing curve editor'],['GSAP','gsap.com — the pro animation library'],['Hover.dev / Codrops','copy-paste interaction patterns and inspiration']]},
+{cat:'Copywriting', items:[['Really Good Emails','reallygoodemails.com — email copy patterns'],['Marketing Examples','marketingexamples.com — short, brilliant copy lessons'],['Swipe Files','collect every ad/headline that makes YOU stop scrolling'],['Hemingway Editor','hemingwayapp.com — makes copy punchy']]},
+{cat:'Business & legal (AU)', items:[['Australian Business Register','abr.gov.au — free ABN registration'],['business.gov.au','templates, grants, legal basics'],['ATO small business','tax obligations, GST threshold, deductions'],['Lawpath / template packs','cheap reviewed service agreement templates']]},
+];
+</script>
+<script>
+/* ===== COLD CALLING ACADEMY ===== */
+const COLDCALL = [
+{t:'The psychology of the cold call', body:`
+<p>The person answering is mid-task, slightly defensive, and pattern-matching you against every telemarketer they've ever hung up on. You have <strong>about 8 seconds</strong> before they decide which bucket you're in. Everything in this academy is about landing in the "local person with something genuinely interesting" bucket instead.</p>
+<p>Three truths to internalise:</p>
+<ul>
+<li><strong>They're not rejecting you.</strong> They're rejecting an interruption. It's structural, not personal.</li>
+<li><strong>Your offer is actually good.</strong> A free, no-obligation demo of their own business's website is one of the least sleazy pitches in existence. If you believe that, your voice will carry it.</li>
+<li><strong>Calls are a numbers game with a skill multiplier.</strong> Volume gets you at-bats; skill converts them. Track both.</li>
+</ul>
+<h5>The pattern interrupt</h5>
+<p>Telemarketers sound scripted, rushed, and over-friendly. So: slow down, use their name and suburb, and be almost casual. Sounding local and unhurried IS the pattern interrupt.</p>`},
+{t:'Best times to call', body:`
+<ul>
+<li><strong>Tradies:</strong> 7:00–8:30am (in the ute, before jobs) or 4:00–5:30pm (driving home). Never midday — they're on the tools.</li>
+<li><strong>Cafés/restaurants:</strong> 2:30–4:30pm, the dead zone between lunch and dinner. Never during service.</li>
+<li><strong>Retail:</strong> Tue–Thu mornings, first hour after opening.</li>
+<li><strong>Offices (dentists, law, real estate):</strong> 9:30–11:30am or 2–4pm. Avoid Monday morning and Friday afternoon.</li>
+<li><strong>General rule:</strong> Tuesday–Thursday beat Monday and Friday. If they sound flat-out, ask "when's a better time?" and actually call back then — that callback alone builds more trust than any script.</li>
+</ul>`},
+{t:'How to sound confident (even when you\'re not)', body:`
+<ul>
+<li><strong>Stand up.</strong> Your diaphragm opens and your voice drops and steadies. Every experienced caller does this.</li>
+<li><strong>Smile before dialling.</strong> Audible in your tone. Corny, real.</li>
+<li><strong>Slow down 20%.</strong> Nerves speed you up; speed signals nerves. Deliberate pace signals status.</li>
+<li><strong>Drop the pitch of the sentence ends.</strong> Ending sentences on a downward tone sounds certain. Upward inflection sounds like you're asking permission to exist.</li>
+<li><strong>Script the first 20 seconds only.</strong> Word-perfect opening, then bullet points. Fully scripted calls sound scripted.</li>
+<li><strong>Do 3 throwaway calls first.</strong> Call your C-grade leads to warm up. Never open the day on your best lead.</li>
+</ul>`},
+{t:'The Northside opener (word for word)', body:`
+<p>Goal of the opener: earn 30 more seconds. Not sell. Not book. Just earn the next sentence.</p>
+${scriptBlock(`Hi, is that [name]? ... G\'day [name], my name\'s [you] — I\'m a web designer here on the Northern Beaches. Really quick one, I promise. I was looking at businesses in [suburb] and noticed [business] doesn\'t have a website / has a site that\'s not doing it justice. We do something a bit different — we build you a complete demo website, free, before you pay anything. If you love it, great. If not, no hard feelings and you\'ve lost nothing. Would you be open to taking a look?`)}
+<h5>Why it works</h5>
+<ul>
+<li>"Is that [name]" — personal, expects a yes, sets a micro-pattern of agreement.</li>
+<li>"Here on the Northern Beaches" — instantly local, not a call centre.</li>
+<li>"Really quick one, I promise" — defuses the interruption tension.</li>
+<li>Names a specific observation about THEIR business — proves it's not a blast.</li>
+<li>Removes all risk before they can object about money.</li>
+<li>Ends with a low-commitment yes ("take a look"), not a meeting request.</li>
+</ul>`},
+{t:'Alternative openers to test', body:`
+<h5>The honest opener</h5>
+${scriptBlock(`Hi [name], full transparency — this is a cold call, and I know you get plenty. Give me 20 seconds and if it\'s not interesting, hang up and I\'ll never bother you again. Fair? ... We build free demo websites for local businesses before they pay anything...`)}
+<h5>The compliment-first opener (for businesses with great reviews)</h5>
+${scriptBlock(`Hi [name], I was reading your Google reviews — people rave about you. Honestly your reputation is better than your website, and I think that\'s costing you customers. I\'d love to show you what I mean, free, no strings...`)}
+<h5>The neighbour opener (once you have local clients)</h5>
+${scriptBlock(`Hi [name], we just rebuilt the website for [nearby business] up the road in [suburb]. While I was working in the area I noticed yours, and I reckon we could do something great for you too. We build a free demo first so you can see it before spending a cent...`)}
+<p><em>Test one opener per week, 30+ calls each, and keep the winner. That's how you develop YOUR script instead of borrowing one forever.</em></p>`},
+{t:'Objection handling — the big eight', body:`
+<p>Rule one: <strong>agree first, then reframe.</strong> "You're right" disarms; arguing entrenches. Rule two: answer, then ask a question to keep the ball moving.</p>
+<h5>1. "I'm not interested"</h5>
+${scriptBlock(`No worries at all — most people say that before they realise the demo is genuinely free. Can I ask one honest question: if new customers Googled you tonight, are you happy with what they\'d find? ... That\'s exactly the gap the demo shows. It costs you nothing to look.`)}
+<h5>2. "We don't need a website / we get work from word of mouth"</h5>
+${scriptBlock(`That\'s honestly great — word of mouth means people trust you. Here\'s the thing though: when someone gets recommended to you, the first thing they do is Google you to check you out. The website doesn\'t replace word of mouth — it catches it.`)}
+<h5>3. "How much does it cost?"</h5>
+${scriptBlock(`The demo? Nothing — that\'s the whole point, you see it before any money comes up. If you love it, sites like yours are typically between [X] and [Y] depending on what you need, and I\'ll give you an exact figure with the demo. But you decide after you\'ve seen it, not before.`)}
+<p><em>Always give a range when asked directly. Dodging the price question completely reads as slippery.</em></p>
+<h5>4. "I don't have time"</h5>
+${scriptBlock(`Totally get it — that\'s actually why we do it this way. You don\'t have to do anything. We build the demo ourselves from what\'s already out there about your business. The only time I need is 10 minutes to show it to you when it\'s done. When suits — mornings or arvos?`)}
+<h5>5. "We already have a website"</h5>
+${scriptBlock(`I saw — that\'s actually why I called. Can I be straight with you? [specific issue: it\'s slow on mobile / it\'s hard to find your prices / it doesn\'t show up when I search plumber + suburb]. I\'ll build you a free side-by-side so you can compare yours against what\'s possible. Worst case, you confirm your current one is fine.`)}
+<h5>6. "My nephew/mate does our website"</h5>
+${scriptBlock(`Good on him — honestly. Keep him. All I\'d say is: have a look at the demo anyway. If his work stacks up against ours, you\'ve lost nothing and you can tell him he\'s doing a great job. If it doesn\'t... you\'ll be glad you looked.`)}
+<h5>7. "Send me an email"</h5>
+<p>This is usually a polite brush-off. Convert it into a micro-commitment:</p>
+${scriptBlock(`Happy to. So I send you something actually useful rather than spam — what\'s the one thing you\'d want a new website to do? More calls, more bookings, look more professional? ... Perfect, I\'ll build the demo around that and email you when it\'s ready. If I call Thursday once you\'ve seen it, is that fair?`)}
+<h5>8. "We got burned by a web guy before"</h5>
+${scriptBlock(`I hear that a lot, and it\'s exactly why we work backwards. You don\'t pay a deposit, you don\'t sign anything, you don\'t hand over a cent until the finished demo is in front of you. All the risk is on us. That\'s about the strongest guarantee anyone can offer.`)}`},
+{t:'Handling gatekeepers', body:`
+<p>Receptionists and staff are paid to filter salespeople. Your job is to not trigger the filter.</p>
+<ul>
+<li><strong>Use the owner's first name like you know them:</strong> "Hey, is Dave about?" beats "May I please speak with the owner or manager?" by a mile.</li>
+<li><strong>Be brief and slightly informal.</strong> Salespeople over-explain to gatekeepers. Locals don't.</li>
+<li><strong>If asked "what's it regarding":</strong> "It's about the website — he'll know what it's about" (true — every owner knows their website situation). Or fully honest: "I've built something for the business I want to show him — it's free, he'll want to see it."</li>
+<li><strong>Recruit them:</strong> "Actually, maybe you can help me — you probably know the website better than anyone. Is it something [owner] has been meaning to fix?" Staff LOVE being asked. Often they become your internal champion.</li>
+<li><strong>Get the timing intel:</strong> "When's he usually in and not flat out?" Gatekeepers give this freely and it's gold.</li>
+</ul>`},
+{t:'Voicemail scripts', body:`
+<p>Expect voicemail 40–60% of the time with tradies. Leave one — but make it a curiosity hook, not a pitch.</p>
+${scriptBlock(`Hi [name], it\'s [you], a web designer here on the Beaches. I\'ve actually started putting together a website concept for [business] — free, no catch, I\'ll explain when we chat. I\'ll try you again [tomorrow arvo], or you can call me on [number]. Cheers.`)}
+<p>Key: "I've started building something for you" is nearly irresistible curiosity bait — and it's true, because your research/demo prep has begun. Follow the voicemail with a text:</p>
+${scriptBlock(`Hi [name], [you] here — just left you a voicemail. Short version: I build free demo websites for Northern Beaches businesses, and I\'d love to make one for [business]. No obligation at all. Keen to see it?`)}
+<p>Texts get read. Voicemail + text combo roughly doubles callbacks.</p>`},
+{t:'Keeping the conversation flowing', body:`
+<ul>
+<li><strong>Ask about their business, not websites.</strong> "How long have you been running it?" "Busy season at the moment?" People warm up talking about themselves.</li>
+<li><strong>Mirror their last few words.</strong> "...flat out with renovations" → "Flat out with renos, hey?" Keeps them talking with zero effort.</li>
+<li><strong>Use their reviews:</strong> "Someone in your reviews said you saved their bathroom job — what happened there?" Instant rapport; proves you did homework.</li>
+<li><strong>Silence is a tool.</strong> After a question or a price, stop talking. The urge to fill silence is how sellers talk themselves out of deals.</li>
+<li><strong>Label emotions:</strong> "Sounds like the last web guy left a bad taste." Naming their hesitation dissolves half of it.</li>
+</ul>`},
+{t:'Asking for the meeting / presenting the demo offer', body:`
+<p>Never end a good call vaguely. Land on ONE concrete next step:</p>
+${scriptBlock(`Here\'s what happens next: I\'ll build the demo this week — you don\'t need to do anything. Then I need 10 minutes to walk you through it, because a link in an email doesn\'t do it justice. Are mornings or afternoons better for you? ... [day] at [time]? Done, I\'ll text you a reminder.`)}
+<ul>
+<li><strong>Give two options, not open-ended</strong> ("mornings or arvos?"), then narrow to a slot.</li>
+<li><strong>Present live, always.</strong> On your laptop at their shop, or a screen share. Demos sent as bare links get judged in 9 seconds on a cracked phone screen.</li>
+<li><strong>Text a reminder the morning of.</strong> No-shows drop by half.</li>
+</ul>`},
+{t:'Dealing with rejection', body:`
+<ul>
+<li><strong>Set a "no quota", not just a yes quota.</strong> Aim to collect 8 no's a day. Reframes every rejection as progress toward quota. Sounds silly; works.</li>
+<li><strong>The 10-second rule.</strong> After a brutal call: exhale, note the outcome in the log, dial the next number within 10 seconds. Momentum is the antidote to dwelling.</li>
+<li><strong>Log every call</strong> (dashboard does this). 50 no's with 3 demos booked is a GREAT week — but only if you can see the ratio.</li>
+<li><strong>Review, don't relive.</strong> Once a week, pick your worst call and ask "what would I do differently?" once. Then close the file.</li>
+<li><strong>Partner debriefs.</strong> Share the funniest rejection of the day with each other. Comedy metabolises rejection faster than motivation quotes.</li>
+</ul>`},
+{t:'Common mistakes that kill calls', body:`
+<ul>
+<li><strong>Pitching features instead of outcomes.</strong> Nobody wants "responsive design". They want more calls, more bookings, looking better than the competitor up the road.</li>
+<li><strong>Talking too much.</strong> Aim for them talking 60% of the call. Two questions for every statement.</li>
+<li><strong>Over-apologising.</strong> One "quick one, I promise" is charm. Repeated "sorry to bother you" is submission.</li>
+<li><strong>Arguing with objections.</strong> Agree, reframe, question. Never debate.</li>
+<li><strong>No next step.</strong> "I'll send you some info" is where deals go to die. Always book a time.</li>
+<li><strong>Calling without research.</strong> One minute on their Google listing before dialling doubles your open rate.</li>
+<li><strong>Quitting after one attempt.</strong> Most owners need 3–5 touches. One call is not outreach; it's a coin flip.</li>
+</ul>`},
+{t:'Follow-up call scripts', body:`
+<h5>After the demo is built</h5>
+${scriptBlock(`Hi [name], [you] here — good news, your demo\'s done and honestly it\'s come up great. I\'m not going to spoil it over the phone. When can I grab 10 minutes to show you? I can come to you.`)}
+<h5>After "let me think about it"</h5>
+${scriptBlock(`Hi [name], no pressure at all — just keeping my word about following up. Where\'s your head at with the site? ... [if hesitant] Can I ask what the main hesitation is? If it\'s something I can fix, I\'d rather know. If it\'s just not the right time, that\'s completely fine too.`)}
+<h5>The 30-day revival (for gone-quiet leads)</h5>
+${scriptBlock(`Hi [name], [you] from Northside. Your demo\'s still sitting here looking great, and I\'d hate for it to go to waste. This week I can [small sweetener: include the first month of care free]. After that I\'ll archive it and stop bothering you, promise. Want one last look?`)}
+<p>The graceful deadline gives them permission to decide — and you permission to move on.</p>`},
+{t:'Call review checklist (weekly, 15 min)', body:`
+<ul>
+<li>Did I reach a decision maker? If not, what stopped me?</li>
+<li>Did I say the opener cleanly, or ramble?</li>
+<li>Talk ratio — who spoke more?</li>
+<li>What objection came up most this week? Is my answer sharp?</li>
+<li>Did every warm call end with a booked next step?</li>
+<li>Calls → conversations → demos agreed: what are this week's ratios?</li>
+<li>One thing to change next week (only one).</li>
+</ul>`},
+];
+
+/* ===== SALES PLAYBOOK ===== */
+const SALES = [
+{t:'Qualification — who deserves a free demo', body:`
+<p>The free demo is your superpower AND your biggest risk. Every demo costs you ~4 hours. Guard those hours.</p>
+<h5>Green lights (build it)</h5>
+<ul><li>Owner-operated local business, reachable decision maker</li><li>Established (reviews, real premises, visibly trading) — they have money</li><li>Website absent, embarrassing, or clearly costing them customers</li><li>They engaged on the call — asked questions, gave you info</li><li>Industry where looking professional matters (trades, health, food, services)</li></ul>
+<h5>Red flags (politely pass or park)</h5>
+<ul><li>"Can you also do it cheaper / can my nephew edit it / what about free hosting forever" on the FIRST call — price fighters before seeing value stay price fighters</li><li>Business visibly dying (for lease sign energy)</li><li>Decision by absent committee or franchise head office</li><li>Rude to you before you've asked for anything — imagine them as a client</li><li>Wants "quick changes to our existing site" — that's a different (and worse) job</li></ul>
+<p><strong>Rule:</strong> both partners agree before a demo gets built. One vote of "meh" = no build, straight to nurture list.</p>`},
+{t:'Discovery questions that do the selling for you', body:`
+<p>Ask these before/while building the demo. Their answers become your pitch.</p>
+<ul>
+<li>"Where do most of your customers come from right now?"</li>
+<li>"When someone Googles you, what do you reckon they see? Are you happy with it?"</li>
+<li>"What's a new customer worth to you, roughly?" <em>(This number prices your website for you.)</em></li>
+<li>"What do people always ask you on the phone that a website could answer?"</li>
+<li>"Who's your main competitor? What annoys you about them?"</li>
+<li>"If the new site could do one thing perfectly, what would it be?"</li>
+<li>"Have you had a website before? What happened?"</li>
+<li>"If the demo blows you away, is there anything else that would stop you going ahead?" <em>(Flushes hidden objections BEFORE you invest the build time.)</em></li>
+</ul>`},
+{t:'Pricing & packaging', body:`
+<h5>The three-package anchor</h5>
+<ul>
+<li><strong>Starter — $990:</strong> one-page site, mobile-first, contact form, click-to-call, map, basic SEO, 1 revision round. For sole tradies and new businesses.</li>
+<li><strong>Growth — $1,990:</strong> up to 5 pages, gallery/portfolio, review integration, on-page SEO, Google Business optimisation, analytics, 2 revision rounds. <em>Your hero package — most should land here.</em></li>
+<li><strong>Premium — $3,500+:</strong> custom design, bookings/e-commerce, copywriting, photography coordination, full SEO setup, priority support.</li>
+</ul>
+<p>Present Growth as the recommendation, Premium as the anchor above it, Starter as the safety net below. Adjust numbers as you learn your market — then <strong>raise them</strong> after every 3 closes until someone says no on price.</p>
+<h5>The care plan (this is the real business)</h5>
+<p><strong>$59–$149/month:</strong> hosting, backups, security, small content edits, monthly report. Pitch at launch: "sites are like cars — they need servicing." 20 clients on care plans ≈ rent paid before you sell anything that month.</p>
+<h5>Presenting price</h5>
+<ul><li>Always AFTER the demo reveal, never before.</li><li>Tie it to their numbers: "you said a job's worth $800 — the Growth site pays for itself in two and a half customers."</li><li>Say the price, then be silent. First one to talk loses.</li><li>Discount only by removing scope, never by just dropping the number — free price cuts teach clients your prices are fiction.</li></ul>`},
+{t:'The demo presentation (your close happens here)', body:`
+<ol>
+<li><strong>Set the frame (30s):</strong> "I'll show you what we built, you tell me honestly what you think, and if you love it I'll explain how it works from here. Deal?"</li>
+<li><strong>Show the BEFORE first.</strong> Their current site (or absence) on a phone. Let the discomfort sit for a beat.</li>
+<li><strong>Reveal the demo on mobile first.</strong> That's where their customers are. Scroll slowly. Narrate outcomes, not features: "customer lands here, sees your reviews, taps this — that's a phone call."</li>
+<li><strong>Use their words.</strong> Everything they said in discovery comes back: "you said people always ask about pricing — that's this section."</li>
+<li><strong>Ask THE question:</strong> "Honestly — what do you think?" Then silence. Let them sell themselves.</li>
+<li><strong>Handle feedback</strong> as revisions, not rejection: "easy change" is a magic phrase.</li>
+<li><strong>Transition:</strong> "So here's how it works if you want to make it yours…" → packages → close.</li>
+</ol>`},
+{t:'Closing techniques (pick honest ones)', body:`
+<ul>
+<li><strong>The assumptive summary:</strong> "So we'll lock in the Growth package, I'll have revisions done Thursday, and you'll be live by next week. Sound right?"</li>
+<li><strong>The choice close:</strong> "Do you want to start with Growth, or go Premium and get the booking system in from day one?" (Either answer is a yes.)</li>
+<li><strong>The ownership close:</strong> "This site is built for [business]. It literally can't belong to anyone else. It'd be a shame to archive it."</li>
+<li><strong>The straight-line close:</strong> "You love it, the price makes sense, there's no risk left — is there any reason not to go ahead today?"</li>
+<li><strong>The takeaway (use sparingly):</strong> "No pressure — I keep demos live for two weeks, then they're archived so we can focus on active clients."</li>
+</ul>
+<p><strong>After the yes:</strong> stop selling. Immediately: "Brilliant. I'll send the agreement and invoice now while we're together — takes two minutes." Verbal yeses evaporate overnight; signed-on-the-spot ones don't.</p>`},
+{t:'Negotiation rules', body:`
+<ul>
+<li>Never cut price without cutting scope. "I can hit that budget if we go 3 pages instead of 5."</li>
+<li>Trade, don't give: "I can do that price if we launch as your featured case study / if payment is upfront."</li>
+<li>Know your walk-away number before every close conversation.</li>
+<li>"That's not in the budget" → "What is the budget? Let me see what fits it." (Often the budget is fine; the objection is habit.)</li>
+<li>Payment plans beat discounts: "$1,990 is $995 now and $995 at launch" solves most genuine cash-flow objections at full price.</li>
+</ul>`},
+{t:'Upselling & cross-selling', body:`
+<ul>
+<li><strong>At close:</strong> care plan (always), extra pages, copywriting, logo refresh.</li>
+<li><strong>At launch:</strong> Google Business optimisation, review-generation setup, professional photos.</li>
+<li><strong>Day 30:</strong> SEO package — "you're live, now let's get you found."</li>
+<li><strong>Day 90:</strong> content additions, seasonal landing pages, Google Ads management referral.</li>
+<li>Rule of thumb: a happy client should be offered something small and useful every quarter. Not pushed — offered.</li>
+</ul>`},
+{t:'Onboarding (first 48 hours after yes)', body:`
+<ol>
+<li>Agreement + deposit invoice sent within the hour.</li>
+<li>Welcome email: timeline, what you need from them (photos, content, logins), single point of contact.</li>
+<li>Create their folder + CRM status → Closed/Active.</li>
+<li>Content deadline in writing: "to launch on the 20th, I need your photos by the 12th."</li>
+<li>Small surprise: a mockup of their business card matching the new site, or their site on a phone-frame image for their socials. Costs you 15 minutes; makes you unforgettable.</li>
+</ol>`},
+{t:'Retention, referrals, reviews', body:`
+<h5>Retention</h5>
+<ul><li>Monthly report even if tiny: traffic, enquiries, one suggestion. Ten minutes of your time = a client who never questions the care plan.</li><li>Check-in call every 6 months. "Anything changed in the business the site should reflect?"</li></ul>
+<h5>Reviews</h5>
+<ul><li>Ask 7 days post-launch while the dopamine is fresh. Send the direct review link — every step you remove doubles completion.</li><li>Template it (Templates tab), but personalise the first line.</li></ul>
+<h5>Referrals</h5>
+<ul><li>Ask at day 30, after the review, when they've seen results: "Who else do you know who needs this?"</li><li>Make the reward concrete: $200 or a free month of care per closed referral.</li><li>Print it on your invoice footer. Every touchpoint is referral real estate.</li></ul>`},
+];
+
+/* ===== MARKETING IDEAS (100+) ===== */
+const MARKETING = [
+{cat:'Free / near-free', ideas:['Before/after posts of every rebuild','Weekly "worst local website" teardown (anonymised!) with fixes','Free 5-minute website audits as a lead magnet','Answer every "recommend a web designer?" post in local Facebook groups within minutes','Publish your pricing openly — instant differentiation from "request a quote" agencies','Google Business posts weekly (yes, agencies forget their own)','A "site of the month" award for a local business (they\'ll share it)','Loom-style video audits sent cold to hot prospects — outrageously effective','Free QR-code menu/page for cafés (foot in the door)','Speed-test challenge: "beat our 1-second load and the site\'s free"','Document the founding journey publicly — locals root for locals','List your business in every free AU directory for citations','Cross-promote with a photographer: they shoot, you build, both share','Free workshop at the local library: "Google Business in 45 minutes"','Alumni/school network — first three clients often come from people who already trust you'],},
+{cat:'Local & community', ideas:['Sponsor a junior sports team ($300 gets your logo on 20 jerseys and every parent\'s camera roll)','Northern Beaches markets stall with live "we\'ll mock your homepage in 10 minutes" demos','Partner with the local chamber of commerce — offer members a discount','Leave-behind cards at cafés/co-working spaces (with permission)','Car signage on your own cars — mobile billboard you already own','Community noticeboards (physical ones still work for trades)','Charity site rebuild once a year — goodwill + press + portfolio','Local paper/newsletter story: "young locals building free websites first" is genuinely newsworthy','Host a quarterly "business owners beers" meetup — be the connector','Letterbox drop ONLY to shopping strips, with a personalised note about their specific site'],},
+{cat:'Content & SEO', ideas:['"Best [industry] websites on the Northern Beaches" roundups (businesses share = backlinks)','Suburb landing pages: web design Dee Why, Mona Vale, Manly…','FAQ content answering real objections ("how much should a tradie website cost?")','Case studies with real numbers ("calls up 40% in 60 days")','Monthly email: 3 tips, 1 result, 1 offer — to every lead who ever said "maybe"','YouTube: screen-recorded rebuild timelapses','A free tools page (colour picker, speed test links) that ranks and captures emails','Comparison content: "Wix vs a professional site — honest breakdown"','Client interview posts — they share, their audience meets you','Refresh the top post quarterly; one great post beats ten thin ones'],},
+{cat:'Social media', ideas:['Reels of design process — screen + hands + result in 20 seconds','"POV: your website loads in under a second" style trend-jacking','Poll stories: "which hero section wins?" (engagement + market research)','Post client launches and tag them — their followers are your prospects','LinkedIn: write for business owners, not designers','Behind-the-scenes of demo day / a close / a launch','Pin a "start here" post explaining the free demo model','DM every new follower who owns a local business — soft, human, curious','Instagram highlights as a portfolio: Before/After, Reviews, Process, Pricing','Consistency rule: 3 posts a week beats 7 then zero'],},
+{cat:'Referral & partnership systems', ideas:['$200 (or free month) per closed referral — printed on every invoice','Accountants + bookkeepers: they know exactly when a business gets serious','Signwriters & printers: they meet businesses at rebrand moments','Photographers/videographers: bundle offers both ways','Business coaches & brokers: their clients ALL need sites','Real estate agents: know every new commercial lease (= new business)','Trade suppliers: counter cards at the plumbing supply store','Marketing freelancers who don\'t build: white-label for them','Web hosts\' local customers with parked domains','A "partner page" on your site linking allies — reciprocity engine'],},
+{cat:'Paid (when cash allows)', ideas:['Google Ads on "web designer northern beaches" — high intent, low volume, worth it','Facebook local-radius ads showing a before/after video','Retarget everyone who visited your site with a case-study ad','Boost your best organic post only (proof it works before paying)','Instagram ads to lookalikes of your client list (later stage)','Sponsor the local business awards','Google Local Services ads when available for your category','Cap spend at 10% of monthly revenue until ROI is proven'],},
+];
+
+/* ===== TEMPLATES ===== */
+const TEMPLATES = [
+{t:'Cold call opener', k:'call', body:`Hi, is that [NAME]?\n\nG'day [NAME], my name's [YOU] — I'm a web designer here on the Northern Beaches. Really quick one, I promise.\n\nI was looking at businesses in [SUBURB] and noticed [BUSINESS] [doesn't have a website / has a site that isn't doing it justice].\n\nWe do something a bit different — we build you a complete demo website, completely free, before you pay anything. If you love it, great. If not, no hard feelings and you've lost nothing.\n\nWould you be open to taking a look?`},
+{t:'Follow-up email (after call, demo in progress)', k:'email', body:`Subject: Your free [BUSINESS] website demo — underway\n\nHi [NAME],\n\nGreat speaking with you today. As promised, we've started building your free demo website — no obligation, no catch.\n\nWhat happens next:\n1. We build the demo (nothing needed from you)\n2. I'll call [DAY] to book 10 minutes to show you\n3. You decide — love it and keep it, or walk away free\n\nOne question in the meantime: if the new site could do ONE thing perfectly — more calls, more bookings, looking sharper than the competition — what would it be?\n\nCheers,\n[YOU]\nNorthside Web · [PHONE] · [SITE]`},
+{t:'Demo-ready text message', k:'text', body:`Hi [NAME], [YOU] from Northside Web — your demo site is done and it's come up really well. Keen to show you this week. Would [DAY] morning or arvo suit better? Takes 10 mins.`},
+{t:'Proposal (post-demo)', k:'email', body:`Subject: [BUSINESS] — your new website\n\nHi [NAME],\n\nGreat to walk you through the demo today. Here's everything in one place.\n\nWHAT YOU SAW\n• Custom design built for [BUSINESS]\n• Mobile-first — most of your customers will see it on a phone\n• [Specific feature they loved]\n• [Specific problem it solves, in their words]\n\nINVESTMENT\n• Growth package — $[PRICE]\n  Includes: [pages], contact forms, click-to-call, Google map, on-page SEO, analytics, 2 revision rounds\n• Optional care plan — $[X]/month: hosting, backups, edits, monthly report\n\nHOW IT WORKS\n1. Reply "let's go" — I'll send the agreement + deposit invoice\n2. Revisions completed within [X] days\n3. Live within [X] days of approval\n\nThe demo stays reserved for [BUSINESS] until [DATE].\n\nAny questions, call me directly on [PHONE].\n\n[YOU] — Northside Web`},
+{t:'Invoice cover note', k:'email', body:`Subject: Invoice [NUMBER] — [BUSINESS] website\n\nHi [NAME],\n\nThanks again — invoice attached for [DESCRIPTION].\n\nAmount: $[AMOUNT]\nDue: [DATE] ([TERMS] days)\nPay to: [ACCOUNT DETAILS] · Reference: [NUMBER]\n\nOnce the [deposit/final payment] lands, [next step: build begins / the site and all files transfer to you].\n\nCheers,\n[YOU]`},
+{t:'Meeting agenda (discovery call)', k:'doc', body:`DISCOVERY — [BUSINESS] — [DATE]\n\n1. Their story (5m): how long running, where customers come from\n2. Current situation (5m): what exists online now, what's frustrating\n3. Goals (10m): the ONE job the site must do · what a customer is worth · who the competition is\n4. Content (5m): photos? logo? who writes copy?\n5. Next steps (5m): demo timeline · presentation booked in the calendar before hanging up\n\nNotes:\n\nRed flags:\n\nQuoted range (if asked):`},
+{t:'Website questionnaire (new client)', k:'doc', body:`NORTHSIDE WEB — NEW WEBSITE QUESTIONNAIRE\n\nTHE BUSINESS\n1. Describe your business in one sentence.\n2. Who is your ideal customer?\n3. What are your 3 most profitable services?\n4. What do customers always ask before buying?\n5. Who are your top 2 competitors?\n\nTHE WEBSITE\n6. The #1 action a visitor should take: call / book / visit / buy?\n7. Any websites you love the look of? (any industry)\n8. Words that describe how the site should feel (e.g. premium, friendly, bold):\n\nCONTENT\n9. Do you have a logo? Photos? Who supplies text?\n10. Domain name + where it's registered (if known):\n\nPRACTICAL\n11. Deadline or event we're launching for?\n12. Best contact person + preferred contact method:`},
+{t:'Launch email', k:'email', body:`Subject: 🎉 [BUSINESS] is LIVE\n\nHi [NAME],\n\nIt's official — your new website is live at [URL].\n\nWhat we've set up:\n• [Feature summary]\n• Analytics (I'll send your first visitor report in 30 days)\n• Google Search Console — Google is now indexing you\n\nYour logins are attached — keep them safe. Here's a 2-minute video on making simple edits: [LINK]\n\nTwo small favours:\n1. Send the site to a few customers and tell me what they say\n2. If you're happy with how this went, a Google review would mean the world: [REVIEW LINK]\n\nIt's been a pleasure. Talk in 30 days with your first report —\n[YOU] · Northside Web`},
+{t:'Review request (day 7)', k:'text', body:`Hi [NAME]! [YOU] from Northside here. Hope the new site's been getting good comments 😄 If you've got 60 seconds, a Google review would genuinely help us heaps — here's the direct link: [LINK]. Thanks legend.`},
+{t:'Referral request (day 30)', k:'email', body:`Subject: Quick one — and your 30-day website report\n\nHi [NAME],\n\nYour first month's numbers are attached: [X] visitors, [X] enquiries. Great start.\n\nQuick ask: we grow through word of mouth from clients like you. If you know another business owner whose website is letting them down, an intro would mean a lot — and we'll give you [$200 / a free month of your care plan] for anyone who comes on board.\n\nJust reply with their name, or forward them this email.\n\nCheers,\n[YOU]`},
+{t:'Contract checklist (before any build)', k:'doc', body:`AGREEMENT MUST COVER:\n□ Exact scope: pages, features, what's NOT included\n□ Price + payment schedule (deposit % / final)\n□ Revision rounds included (and hourly rate beyond)\n□ Client content deadlines — delays pause the timeline\n□ IP transfers to client on FINAL payment only\n□ Demo remains Northside property until purchase\n□ Care plan terms if applicable (monthly, cancel anytime)\n□ Portfolio rights: we may display the work\n□ Both parties signed + dated BEFORE work begins`},
+{t:'Pre-launch QA checklist', k:'doc', body:`QA — [SITE] — [DATE]\n□ Every link clicked, every page visited\n□ Forms tested — email actually arrives at client's inbox\n□ Click-to-call works on a real phone\n□ Mobile: iPhone + Android checked\n□ Speed: under 2s mobile / PageSpeed 85+\n□ All images compressed + alt text\n□ Page titles + meta descriptions unique on every page\n□ Favicon, 404 page, SSL padlock\n□ Business name, phone, address, hours triple-checked\n□ Spellcheck EVERYTHING\n□ Analytics + Search Console verified\n□ Backup taken\n□ Old site (if any) redirected properly`},
+{t:'Maintenance / care plan pitch', k:'call', body:`One last thing before you go live — the care plan.\n\nWebsites are like cars: they run best with servicing. For $[X] a month we handle hosting, security, backups, and any small changes you need — new photos, price updates, that kind of thing. Plus a monthly report showing your visitors and enquiries.\n\nMost of our clients take it because it means you never have to think about the website again — it just works, and we're one text away.\n\nWant me to include the first month free so you can see how it works?`},
+{t:'Invoice chase (polite, day 1 overdue)', k:'email', body:`Subject: Friendly nudge — invoice [NUMBER]\n\nHi [NAME],\n\nJust a friendly nudge that invoice [NUMBER] for $[AMOUNT] fell due yesterday — it may have slipped through (happens to all of us!).\n\nDetails: [ACCOUNT] · Reference: [NUMBER]\n\nIf it's already on the way, ignore me entirely. Any issues at all, call me and we'll sort it.\n\nCheers,\n[YOU]`},
+];
+
+/* ===== STARTUP LESSONS ===== */
+const LESSONS = [
+{t:'Why web agencies fail — and your countermeasure', body:`
+<h5>1. Feast-and-famine cash flow</h5><p>Agencies sell a project, stop marketing to deliver it, finish broke, and start hunting again. <strong>Countermeasure:</strong> cold calling happens EVERY week no matter what's in the build queue — it's scheduled in the dashboard, not squeezed in. And every close gets offered the care plan, so recurring revenue slowly builds a floor under you.</p>
+<h5>2. Underpricing until death</h5><p>New agencies price from fear. Cheap clients are also the most demanding, so you end up busiest AND poorest. <strong>Countermeasure:</strong> fixed packages, priced before emotion enters, raised after every 3 closes.</p>
+<h5>3. Scope creep</h5><p>"Can you just quickly add…" repeated twenty times turns a $2k job into a $500/hour-of-your-life job. <strong>Countermeasure:</strong> scope in writing, revision rounds capped, change requests quoted separately and cheerfully.</p>
+<h5>4. Doing everything for everyone</h5><p>Generalists compete on price; specialists compete on trust. <strong>Countermeasure:</strong> geographic niche first (Northern Beaches), industry niche later once the data tells you which one loves you.</p>
+<h5>5. The partnership blow-up</h5><p>Most two-founder businesses die from unspoken resentment, not markets. <strong>Countermeasure:</strong> written agreement now, weekly standup, monthly money review together, and permission to disagree out loud.</p>`},
+{t:'Why startups die in year one', body:`
+<ul>
+<li><strong>No real demand.</strong> You're safe — every business needs a website — but demand must still be harvested. Nothing here works without call volume. The dashboard tracks calls first for a reason.</li>
+<li><strong>Ran out of cash.</strong> Track every dollar (Finance tab). Know your monthly survival number. The 30% tax siphon is not optional.</li>
+<li><strong>Founder burnout.</strong> Streaks, momentum, and rewards exist in this dashboard because motivation is a system, not a mood. Take one full day off per week. Guard it.</li>
+<li><strong>No differentiation.</strong> Yours is built in: the free demo. Say it in every sentence of marketing. When competitors copy it (they will), your speed, locality, and portfolio will already be the moat.</li>
+<li><strong>Drowning in busywork.</strong> If a task happens twice, template it. That's why the Templates tab exists — feed it constantly.</li>
+<li><strong>Ignoring the numbers.</strong> Feelings lie; ratios don't. Calls→conversations→demos→closes. Review weekly. When a ratio drops, that's the ONLY thing to fix that week.</li>
+</ul>`},
+{t:'Why cold outreach fails (and how yours won\'t)', body:`
+<ul>
+<li><strong>Generic blasts.</strong> "Dear business owner" dies instantly. Every Northside call references THEIR business, suburb, and a specific observation.</li>
+<li><strong>Pitching too early.</strong> The opener earns 30 seconds; the 30 seconds earns the demo; the demo earns the sale. Skip a step and the chain breaks.</li>
+<li><strong>One-touch outreach.</strong> Most closes happen on touches 3–5. The Follow-ups system exists because persistence, politely applied, IS the strategy.</li>
+<li><strong>No tracking.</strong> Without a log you repeat mistakes and can't see what's working. Log every call — it's two taps on the dashboard.</li>
+<li><strong>Inconsistency.</strong> 10 calls a day for 90 days beats 100 calls once a month, every time. Momentum compounds; bursts evaporate.</li>
+</ul>`},
+{t:'Why web design businesses don\'t scale', body:`
+<ul>
+<li><strong>The founder IS the product.</strong> If every pixel needs you, you own a job, not a business. Fix: templates, component libraries, documented process (Build System tab) from day one — so a future hire can produce Northside-quality work.</li>
+<li><strong>Selling hours instead of outcomes.</strong> Hours cap your income at the calendar. Fixed-price packages + care plans decouple income from time.</li>
+<li><strong>No recurring revenue.</strong> Project-only agencies restart from zero every month. The care plan book is the scale engine — protect and grow it obsessively.</li>
+<li><strong>Custom-everything.</strong> Agencies that rebuild the wheel per client have negative margins at scale. Your starter template is a business asset; improve it after every project.</li>
+<li><strong>Growth by more clients instead of better clients.</strong> Double the average project value and you scale with HALF the work. Review pricing quarterly.</li>
+</ul>`},
+{t:'Operating principles for Northside', body:`
+<ul>
+<li><strong>Speed is a feature.</strong> Reply fast, build fast, revise fast. In local business, fast feels premium.</li>
+<li><strong>Every artefact is a portfolio piece.</strong> Invoices, proposals, emails — a design agency is judged on everything it touches.</li>
+<li><strong>Say no to bad-fit work.</strong> Every hour on a nightmare client is an hour stolen from a great one.</li>
+<li><strong>Default to transparency</strong> — with clients about problems, with each other about money and workload.</li>
+<li><strong>Protect the demo model.</strong> Timebox demos, qualify hard, and the model prints. Get sloppy and free work eats you.</li>
+<li><strong>The daily minimum:</strong> when everything's chaos, do the non-negotiables — the calls, the follow-ups. Businesses die when outreach stops.</li>
+</ul>`},
+];
+
+/* ===== QUOTES ===== */
+const QUOTES = [
+['Amateurs sit and wait for inspiration. The rest of us just get up and go to work.','Stephen King'],
+['You miss 100% of the calls you don\'t make.','Every sales floor ever'],
+['Hard choices, easy life. Easy choices, hard life.','Jerzy Gregorek'],
+['The best marketing strategy ever: care.','Gary Vaynerchuk'],
+['Whether you think you can, or you think you can\'t — you\'re right.','Henry Ford'],
+['Make something people want.','Paul Graham'],
+['Done is better than perfect.','Sheryl Sandberg'],
+['The man who moves a mountain begins by carrying away small stones.','Confucius'],
+['Sales cures all.','Mark Cuban'],
+['Success is the sum of small efforts, repeated day in and day out.','Robert Collier'],
+['If you\'re not embarrassed by the first version, you launched too late.','Reid Hoffman'],
+['Fall in love with the process and the results will come.','Eric Thomas'],
+];
+</script>
+<script>
+/* ---------- 4. PAGE RENDERERS ---------- */
+
+/* helpers for computed business stats */
+function bizStats(){
+  const c = S.clients;
+  const by = st => c.filter(x=>x.status===st).length;
+  const closed = by('Closed');
+  const lost = by('Lost');
+  const demos = c.filter(x=>['Demo complete','Proposal sent','Closed'].includes(x.status)).length;
+  const decided = closed + lost;
+  const weekKeys = [...Array(7)].map((_,i)=>new Date(Date.now()-i*864e5).toISOString().slice(0,10));
+  const callsWeek = weekKeys.reduce((a,k)=>a+(S.daily[k]?.calls||0),0);
+  const now = new Date();
+  const monthIncome = S.finance.entries.filter(e=>e.type==='income' && new Date(e.date).getMonth()===now.getMonth() && new Date(e.date).getFullYear()===now.getFullYear()).reduce((a,e)=>a+Number(e.amount||0),0);
+  const totalCalls = Object.values(S.daily).reduce((a,d)=>a+(d.calls||0),0);
+  const sitesBuilt = c.filter(x=>['Demo complete','Proposal sent','Closed'].includes(x.status)).length;
+  return {
+    total:c.length, closed, lost, demos, sitesBuilt, totalCalls, callsWeek, monthIncome,
+    active: c.filter(x=>!['Closed','Lost'].includes(x.status)).length,
+    interested: by('Interested'), followupsDue: c.filter(x=>x.followup && x.followup <= todayKey() && !['Closed','Lost'].includes(x.status)),
+    conv: pct(demos, c.length||0),                 // lead → demo
+    close: decided>0 ? pct(closed, decided) : 0,   // demo decisions → closed
+    pipelineValue: c.filter(x=>['Demo complete','Proposal sent'].includes(x.status)).length * (S.finance.avgPrice||1500),
+  };
+}
+function checklistProgress(){
+  let done=0, total=0;
+  CHECKLIST.forEach((c,ci)=>c.items.forEach((_,ii)=>{ total++; if(S.checklist[ci+'-'+ii]) done++; }));
+  return {done,total,p:pct(done,total)};
+}
+
+/* ===== DASHBOARD ===== */
+function renderDashboard(){
+  const st = bizStats(), d = day(), g = S.goals, cl = checklistProgress();
+  const dailyP = pct(d.calls, g.dailyCalls), weekP = pct(st.callsWeek, g.weeklyCalls);
+  const revP = pct(st.monthIncome, g.monthlyRevenue);
+  const q = QUOTES[new Date().getDate() % QUOTES.length];
+  // momentum: last 7 days of calls sparkline
+  const week = [...Array(7)].map((_,i)=>{ const k=new Date(Date.now()-(6-i)*864e5).toISOString().slice(0,10); return S.daily[k]?.calls||0; });
+  const maxW = Math.max(...week, 1);
+  const urgent = st.followupsDue;
+
+  $('#page-dashboard').innerHTML = `
+  <div class="grid g3">
+    <div class="card hoverable glass" style="grid-column:span 2;display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+      ${ring(dailyP,128,'of daily calls', d.calls+'/'+g.dailyCalls)}
+      <div style="flex:1;min-width:200px">
+        <div class="stat" style="padding:0">
+          <div class="k">${icon('target',12)} Today's focus</div>
+          <input class="input" style="margin-top:8px;font-size:15px;font-weight:600" placeholder="What is the ONE thing that matters today?"
+            value="${esc(S.focus.date===todayKey()?S.focus.text:'')}"
+            onchange="S.focus={text:this.value,date:todayKey()};save();toast('Focus set')">
+        </div>
+        <div class="flex mt wrap">
+          <button class="btn primary" onclick="logCall()">${icon('phone',14)} Log a call</button>
+          <button class="btn" onclick="logDemo()">${icon('spark',14)} Log demo booked</button>
+          <button class="btn ghost" onclick="go('crm')">Open pipeline ${icon('arrow',13)}</button>
+        </div>
+      </div>
+    </div>
+    <div class="card quote-card hoverable"><p>“${q[0]}”</p><div class="qa">— ${q[1]}</div></div>
+  </div>
+
+  <div class="section-title">This week</div>
+  <div class="grid g4">
+    <div class="card stat hoverable"><div class="k">${icon('phone',12)} Calls this week</div><div class="v">${st.callsWeek}<span class="unit"> / ${g.weeklyCalls}</span></div>${bar(weekP)}</div>
+    <div class="card stat hoverable"><div class="k">${icon('spark',12)} Demos booked (wk)</div><div class="v">${[...Array(7)].reduce((a,_,i)=>{const k=new Date(Date.now()-i*864e5).toISOString().slice(0,10);return a+(S.daily[k]?.demos||0)},0)}<span class="unit"> / ${g.weeklyDemos}</span></div><div class="d">Keep 3 demos in flight at all times</div></div>
+    <div class="card stat hoverable"><div class="k">${icon('dollar',12)} Revenue this month</div><div class="v">${fmt$(st.monthIncome)}</div>${bar(revP, revP>=100?'green':'')}<div class="d mt" style="margin-top:6px">${revP}% of ${fmt$(g.monthlyRevenue)} goal</div></div>
+    <div class="card stat hoverable"><div class="k">${icon('chart',12)} Pipeline value (est.)</div><div class="v">${fmt$(st.pipelineValue)}</div><div class="d">${st.demos - st.closed >= 0 ? st.total? (S.clients.filter(x=>['Demo complete','Proposal sent'].includes(x.status)).length) : 0 : 0} demos awaiting decision × avg price</div></div>
+  </div>
+
+  <div class="section-title">Business health</div>
+  <div class="grid g4">
+    <div class="card stat hoverable"><div class="k">Leads in CRM</div><div class="v">${st.total}</div><div class="d">${st.active} active · ${st.interested} interested</div></div>
+    <div class="card stat hoverable"><div class="k">Conversion (lead→demo)</div><div class="v">${st.conv}<span class="unit">%</span></div>${bar(st.conv, st.conv>=20?'green':'amber')}</div>
+    <div class="card stat hoverable"><div class="k">Close rate (demo→sale)</div><div class="v">${st.close}<span class="unit">%</span></div>${bar(st.close, st.close>=40?'green':'amber')}</div>
+    <div class="card stat hoverable"><div class="k">Deals closed / lost</div><div class="v">${st.closed}<span class="unit"> / ${st.lost}</span></div><div class="d">${st.totalCalls} calls made all-time</div></div>
+  </div>
+
+  <div class="grid g2 mt">
+    <div class="card hoverable">
+      <div class="flex between"><h3>Momentum — calls, last 7 days</h3><span class="badge b-teal no-dot">${week.reduce((a,b)=>a+b,0)} total</span></div>
+      <div class="spark mt">${week.map(v=>`<i style="height:${Math.max(8, v/maxW*100)}%" title="${v} calls"></i>`).join('')}</div>
+      <div class="flex between sm mut" style="margin-top:6px"><span>${new Date(Date.now()-6*864e5).toLocaleDateString('en-AU',{weekday:'short'})}</span><span>today</span></div>
+    </div>
+    <div class="card hoverable">
+      <div class="flex between"><h3>Follow-ups due</h3><button class="btn sm ghost" onclick="go('followups')">All ${icon('arrow',12)}</button></div>
+      ${urgent.length ? urgent.slice(0,4).map(c=>`
+        <div class="flex between" style="padding:8px 0;border-bottom:1px solid var(--line)">
+          <div><strong class="sm">${esc(c.name)}</strong><div class="xs mut">${esc(c.status)} · due ${esc(c.followup)}</div></div>
+          <span class="badge ${c.followup < todayKey() ? 'b-red':'b-amber'}">${c.followup < todayKey() ? 'overdue':'today'}</span>
+        </div>`).join('')
+      : `<div class="empty" style="padding:22px">${icon('check',30)}<p>Nothing due. Go create some future follow-ups — make calls.</p></div>`}
+    </div>
+  </div>
+
+  <div class="grid g2 mt">
+    <div class="card hoverable">
+      <div class="flex between"><h3>Agency setup progress</h3><span class="mono sm mut">${cl.done}/${cl.total}</span></div>
+      ${bar(cl.p)}
+      <div class="sm mut mt">${cl.p}% of the master checklist complete — <a href="#" onclick="go('checklist');return false">continue ${'>'}</a></div>
+    </div>
+    <div class="card hoverable">
+      <h3>Pipeline snapshot</h3>
+      <div class="pipe-row" style="grid-template-columns:repeat(6,1fr)">
+        ${['New','Interested','Demo complete','Proposal sent','Closed','Lost'].map(s=>{
+          const n = S.clients.filter(c=>c.status===s).length;
+          return `<div class="pipe-col" style="min-height:52px;text-align:center;cursor:pointer" onclick="go('crm')"><h6 style="justify-content:center">${s.split(' ')[0]}</h6><div class="mono" style="font-size:19px;font-weight:700">${n}</div></div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function logCall(){
+  day().calls++; save();
+  const d = day();
+  toast(`Call #${d.calls} logged — ${Math.max(0,S.goals.dailyCalls-d.calls)} to daily goal`);
+  renderDashboard();
+}
+function logDemo(){ day().demos++; save(); toast('Demo booked. That\'s how it\'s done.'); renderDashboard(); }
+
+/* ===== MASTER CHECKLIST ===== */
+function renderChecklist(){
+  const cl = checklistProgress();
+  $('#page-checklist').innerHTML = `
+    <div class="card glass mb" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      ${ring(cl.p, 92, 'complete')}
+      <div style="flex:1;min-width:220px">
+        <h3>The master checklist</h3>
+        <p class="sm mut">Everything a real agency needs, in order of pain avoided. ${cl.done} of ${cl.total} done. Progress saves automatically.</p>
+        ${bar(cl.p)}
+      </div>
+      <input class="input" style="max-width:220px" placeholder="Filter items…" oninput="filterChecklist(this.value)">
+    </div>
+    <div id="clList">${CHECKLIST.map((c,ci)=>{
+      const done = c.items.filter((_,ii)=>S.checklist[ci+'-'+ii]).length;
+      return `<div class="acc ${done<c.items.length&&done>0?'open':''}" data-cat="${ci}">
+        <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span style="color:var(--acc)">${icon(c.icon,15)}</span><h4>${esc(c.cat)}</h4>
+          <span class="mono xs mut">${done}/${c.items.length}</span>
+          <div class="bar" style="width:70px">${'<i style="width:'+pct(done,c.items.length)+'%"></i>'}</div>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+        </button>
+        <div class="acc-body">${c.items.map((it,ii)=>{
+          const id = ci+'-'+ii;
+          return `<div class="chk ${S.checklist[id]?'done':''}" data-txt="${esc(it[0].toLowerCase())}" onclick="toggleCheck('${id}',this)">
+            <span class="box"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="txt">${esc(it[0])}${it[1]?`<span class="why">${esc(it[1])}</span>`:''}</span>
+          </div>`;}).join('')}
+        </div>
+      </div>`;}).join('')}
+    </div>`;
+}
+function toggleCheck(id, el){
+  S.checklist[id] = !S.checklist[id];
+  if(!S.checklist[id]) delete S.checklist[id];
+  save(); el.classList.toggle('done');
+  // update header counters without full rerender
+  const head = el.closest('.acc'); const ci = +head.dataset.cat;
+  const done = CHECKLIST[ci].items.filter((_,ii)=>S.checklist[ci+'-'+ii]).length;
+  head.querySelector('.mono').textContent = done+'/'+CHECKLIST[ci].items.length;
+  head.querySelector('.bar>i').style.width = pct(done,CHECKLIST[ci].items.length)+'%';
+}
+function filterChecklist(q){
+  q = q.trim().toLowerCase();
+  $$('#clList .chk').forEach(el=> el.style.display = (!q || el.dataset.txt.includes(q)) ? '' : 'none');
+  $$('#clList .acc').forEach(a=>{ if(q) a.classList.add('open'); });
+}
+
+/* ===== generic accordion library page (cold calling, sales, lessons) ===== */
+function libraryPage(rootId, intro, data, openFirst=true){
+  $(rootId).innerHTML = intro + data.map((s,i)=>`
+    <div class="acc ${i===0&&openFirst?'open':''}">
+      <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+        <span class="mono xs" style="color:var(--dim);width:22px">${String(i+1).padStart(2,'0')}</span>
+        <h4>${esc(s.t)}</h4>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+      </button>
+      <div class="acc-body">${s.body}</div>
+    </div>`).join('');
+}
+function renderColdCalling(){
+  libraryPage('#page-coldcalling', `
+    <div class="card glass mb">
+      <div class="flex between wrap">
+        <div><h3>${icon('phone',15)} Cold Calling Academy</h3>
+        <p class="sm mut">The complete Northside phone system: psychology → openers → objections → follow-up. Read one module before every call block.</p></div>
+        <button class="btn primary" onclick="logCall()">${icon('phone',13)} Log a call</button>
+      </div>
+      <div class="chip-row">
+        <span class="chip on">Golden rule: earn the next 30 seconds, nothing more</span>
+        <span class="chip">Stand up · smile · slow down 20%</span>
+        <span class="chip">Agree → reframe → question</span>
+        <span class="chip">Always book the next step</span>
+      </div>
+    </div>`, COLDCALL);
+}
+function renderSales(){
+  libraryPage('#page-sales', `
+    <div class="card glass mb"><h3>${icon('target',15)} Sales System</h3>
+      <p class="sm mut">From qualification to referrals. The free demo gets you in the room — this playbook turns rooms into revenue. The close rate on the dashboard is the scoreboard for this page.</p>
+    </div>`, SALES);
+}
+function renderLessons(){
+  libraryPage('#page-lessons', `
+    <div class="card glass mb"><h3>${icon('grad',15)} Startup Lessons</h3>
+      <p class="sm mut">Why agencies and startups die — pre-loaded so Northside doesn't have to learn any of it the expensive way. Each failure mode maps to a system that already exists in this dashboard.</p>
+    </div>`, LESSONS);
+}
+
+/* ===== BUILD SYSTEM ===== */
+function renderBuild(){
+  const totalTasks = BUILD_FLOW.reduce((a,s)=>a+s.tasks.length,0);
+  const doneTasks = Object.keys(S.buildChecks).length;
+  $('#page-build').innerHTML = `
+    <div class="card glass mb" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      ${ring(pct(doneTasks,totalTasks),92,'this build')}
+      <div style="flex:1;min-width:220px">
+        <h3>${icon('hammer',15)} Website Building System</h3>
+        <p class="sm mut">The 18-stage pipeline from lead to maintenance. Tick through it per project, then reset for the next one. Every stage has a checklist earned from someone's mistakes.</p>
+      </div>
+      <button class="btn" onclick="if(confirm('Reset the build tracker for a new project?')){S.buildChecks={};save();renderBuild();toast('Build tracker reset — new project, clean slate')}">${icon('zap',13)} New project</button>
+    </div>
+    <div class="flow">
+    ${BUILD_FLOW.map((s,si)=>{
+      const done = s.tasks.filter((_,ti)=>S.buildChecks[si+'-'+ti]).length;
+      const stageDone = done===s.tasks.length;
+      return `<div class="flow-stage ${stageDone?'done':''}" id="stage-${si}">
+        <div class="flow-rail"><div class="flow-dot">${stageDone?'✓':si+1}</div>${si<BUILD_FLOW.length-1?'<div class="flow-line"></div>':''}</div>
+        <div class="flow-body">
+          <div class="acc ${!stageDone && done>0 ? 'open':''}" style="margin-bottom:0">
+            <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+              <h4>${esc(s.stage)}</h4><span class="mono xs mut">${done}/${s.tasks.length}</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+            </button>
+            <div class="acc-body">${s.tasks.map((t,ti)=>{
+              const id = si+'-'+ti;
+              return `<div class="chk ${S.buildChecks[id]?'done':''}" onclick="toggleBuild('${id}',this,${si})">
+                <span class="box"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span><span class="txt">${esc(t)}</span></div>`;}).join('')}
+            </div>
+          </div>
+        </div>
+      </div>`;}).join('')}
+    </div>`;
+}
+function toggleBuild(id, el, si){
+  S.buildChecks[id] = !S.buildChecks[id];
+  if(!S.buildChecks[id]) delete S.buildChecks[id];
+  save(); el.classList.toggle('done');
+  const done = BUILD_FLOW[si].tasks.filter((_,ti)=>S.buildChecks[si+'-'+ti]).length;
+  const stage = $('#stage-'+si);
+  stage.classList.toggle('done', done===BUILD_FLOW[si].tasks.length);
+  stage.querySelector('.flow-dot').textContent = done===BUILD_FLOW[si].tasks.length ? '✓' : si+1;
+  stage.querySelector('.mono').textContent = done+'/'+BUILD_FLOW[si].tasks.length;
+  if(done===BUILD_FLOW[si].tasks.length) toast(`Stage complete: ${BUILD_FLOW[si].stage}`);
+}
+
+/* ===== AUDIT ===== */
+function renderAudit(){
+  const total = AUDIT.reduce((a,s)=>a+s.checks.length,0);
+  const passed = Object.keys(S.auditChecks).length;
+  const score = pct(passed,total);
+  $('#page-audit').innerHTML = `
+    <div class="card glass mb" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      ${ring(score,92,'passing', score+'%')}
+      <div style="flex:1;min-width:220px">
+        <h3>${icon('scan',15)} Website Audit</h3>
+        <p class="sm mut">Run this against a prospect's current site. Tick what <strong>passes</strong> — everything unticked is your pitch. Screenshot the score for the demo presentation.</p>
+        <input class="input mt" style="max-width:320px" placeholder="Business / site being audited…" value="${esc(S.auditClient)}" onchange="S.auditClient=this.value;save()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn" onclick="copyAudit()">${icon('copy',13)} Copy report</button>
+        <button class="btn ghost" onclick="if(confirm('Clear this audit?')){S.auditChecks={};save();renderAudit()}">Reset</button>
+      </div>
+    </div>
+    ${AUDIT.map((a,ai)=>{
+      const done = a.checks.filter((_,ci)=>S.auditChecks[ai+'-'+ci]).length;
+      return `<div class="acc open">
+        <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+          <h4>${esc(a.area)}</h4>
+          <span class="badge ${done===a.checks.length?'b-green':done===0?'b-red':'b-amber'} no-dot">${done}/${a.checks.length} pass</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+        </button>
+        <div class="acc-body">${a.checks.map((c,ci)=>{
+          const id = ai+'-'+ci;
+          return `<div class="chk ${S.auditChecks[id]?'done':''}" onclick="S.auditChecks['${id}']=!S.auditChecks['${id}'];if(!S.auditChecks['${id}'])delete S.auditChecks['${id}'];save();renderAudit()">
+            <span class="box"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span><span class="txt">${esc(c)}</span></div>`;}).join('')}
+        </div>
+      </div>`;}).join('')}`;
+}
+function copyAudit(){
+  const total = AUDIT.reduce((a,s)=>a+s.checks.length,0);
+  const passed = Object.keys(S.auditChecks).length;
+  let out = `WEBSITE AUDIT — ${S.auditClient||'(unnamed)'} — ${new Date().toLocaleDateString('en-AU')}\nScore: ${passed}/${total} (${pct(passed,total)}%)\n\n`;
+  AUDIT.forEach((a,ai)=>{
+    out += a.area.toUpperCase()+'\n';
+    a.checks.forEach((c,ci)=> out += (S.auditChecks[ai+'-'+ci] ? '  ✓ ' : '  ✗ ') + c + '\n');
+    out += '\n';
+  });
+  out += 'Everything marked ✗ is what the Northside rebuild fixes.\n';
+  copyText(out, 'Audit report copied');
+}
+</script>
+<script>
+/* ===== CRM ===== */
+const STATUSES = ['New','Interested','Demo complete','Proposal sent','Closed','Lost'];
+const statusBadge = s => ({New:'b-grey',Interested:'b-blue','Demo complete':'b-teal','Proposal sent':'b-purple',Closed:'b-green',Lost:'b-red'}[s]||'b-grey');
+let crmSort = {key:'priority', dir:1}, crmFilter = 'all', crmQuery='';
+
+function renderCRM(){
+  let rows = S.clients.slice();
+  if(crmFilter!=='all') rows = rows.filter(c=>c.status===crmFilter);
+  if(crmQuery) rows = rows.filter(c=>(c.name+' '+c.owner+' '+c.industry+' '+c.notes).toLowerCase().includes(crmQuery));
+  const pv = {High:0,Medium:1,Low:2};
+  rows.sort((a,b)=>{
+    let x=a[crmSort.key]??'', y=b[crmSort.key]??'';
+    if(crmSort.key==='priority'){x=pv[x]??3;y=pv[y]??3;}
+    return (x>y?1:x<y?-1:0)*crmSort.dir;
+  });
+  $('#page-crm').innerHTML = `
+    <div class="pipe-row mb">
+      ${STATUSES.map(s=>{
+        const list = S.clients.filter(c=>c.status===s);
+        return `<div class="pipe-col"><h6>${s}<span>${list.length}</span></h6>
+          ${list.slice(0,5).map(c=>`<div class="pipe-card" onclick="openClient('${c.id}')">${esc(c.name)}</div>`).join('')}
+          ${list.length>5?`<div class="xs mut" style="text-align:center">+${list.length-5} more</div>`:''}
+        </div>`;}).join('')}
+    </div>
+    <div class="card">
+      <div class="flex between wrap mb">
+        <div class="flex wrap">
+          <input class="input" style="width:200px" placeholder="Search clients…" value="${esc(crmQuery)}" oninput="crmQuery=this.value.toLowerCase();renderCRM()">
+          <select class="input" style="width:160px" onchange="crmFilter=this.value;renderCRM()">
+            <option value="all">All statuses</option>
+            ${STATUSES.map(s=>`<option ${crmFilter===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn primary" onclick="openClient()">${icon('plus',14)} Add lead</button>
+      </div>
+      ${rows.length ? `<div style="overflow-x:auto"><table class="tbl"><thead><tr>
+        ${[['name','Business'],['owner','Owner'],['industry','Industry'],['status','Status'],['priority','Priority'],['followup','Follow-up'],['phone','Phone']].map(([k,l])=>
+          `<th onclick="crmSort=crmSort.key==='${k}'?{key:'${k}',dir:-crmSort.dir}:{key:'${k}',dir:1};renderCRM()">${l}${crmSort.key===k?(crmSort.dir>0?' ↑':' ↓'):''}</th>`).join('')}
+      </tr></thead><tbody>
+        ${rows.map(c=>`<tr onclick="openClient('${c.id}')">
+          <td><strong>${esc(c.name)}</strong>${c.website?`<div class="xs mut">${esc(c.website)}</div>`:''}</td>
+          <td>${esc(c.owner||'—')}</td>
+          <td class="mut">${esc(c.industry||'—')}</td>
+          <td><span class="badge ${statusBadge(c.status)}">${esc(c.status)}</span></td>
+          <td>${c.priority==='High'?'🔥 High':c.priority==='Low'?'Low':'Medium'}</td>
+          <td class="mono xs ${c.followup && c.followup<=todayKey() && !['Closed','Lost'].includes(c.status)?'':'mut'}" style="${c.followup && c.followup<=todayKey() && !['Closed','Lost'].includes(c.status)?'color:var(--amber)':''}">${esc(c.followup||'—')}</td>
+          <td class="mono xs mut">${esc(c.phone||'—')}</td>
+        </tr>`).join('')}
+      </tbody></table></div>`
+      : `<div class="empty">${icon('users',34)}<p>No leads yet. Open Google Maps, find 10 businesses with no website, and add them.<br>The CRM fills itself once the calls start.</p><button class="btn primary mt" onclick="openClient()">${icon('plus',13)} Add your first lead</button></div>`}
+    </div>`;
+}
+function openClient(id){
+  const c = id ? S.clients.find(x=>x.id===id) : {id:'',name:'',owner:'',phone:'',email:'',industry:'',website:'',status:'New',followup:'',notes:'',priority:'Medium'};
+  openModal(`
+    <h3>${id?'Edit lead':'New lead'}</h3>
+    <div class="row2">
+      <div class="fgroup"><label class="fld">Business name</label><input class="input" id="f-name" value="${esc(c.name)}"></div>
+      <div class="fgroup"><label class="fld">Owner</label><input class="input" id="f-owner" value="${esc(c.owner)}"></div>
+      <div class="fgroup"><label class="fld">Phone</label><input class="input" id="f-phone" value="${esc(c.phone)}"></div>
+      <div class="fgroup"><label class="fld">Email</label><input class="input" id="f-email" value="${esc(c.email)}"></div>
+      <div class="fgroup"><label class="fld">Industry</label><input class="input" id="f-industry" value="${esc(c.industry)}" placeholder="Plumber, café, dentist…"></div>
+      <div class="fgroup"><label class="fld">Current website</label><input class="input" id="f-website" value="${esc(c.website)}" placeholder="none!"></div>
+      <div class="fgroup"><label class="fld">Status</label><select class="input" id="f-status">${STATUSES.map(s=>`<option ${c.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fgroup"><label class="fld">Priority</label><select class="input" id="f-priority">${['High','Medium','Low'].map(p=>`<option ${c.priority===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="fgroup"><label class="fld">Follow-up date</label><input class="input" type="date" id="f-followup" value="${esc(c.followup)}"></div>
+    </div>
+    <div class="fgroup"><label class="fld">Notes (research, objections, personal details)</label><textarea class="input" id="f-notes" rows="4">${esc(c.notes)}</textarea></div>
+    <div class="modal-foot">
+      ${id?`<button class="btn danger" onclick="if(confirm('Delete ${esc(c.name)}?')){S.clients=S.clients.filter(x=>x.id!=='${id}');save();closeModal();renderCRM();toast('Lead deleted')}" style="margin-right:auto">${icon('trash',13)} Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveClient('${id||''}')">${id?'Save changes':'Add lead'}</button>
+    </div>`);
+}
+function saveClient(id){
+  const g = i => $('#f-'+i).value.trim();
+  if(!g('name')) return toast('Business name is required');
+  const rec = {id: id||uid(), name:g('name'), owner:g('owner'), phone:g('phone'), email:g('email'),
+    industry:g('industry'), website:g('website'), status:$('#f-status').value, priority:$('#f-priority').value,
+    followup:$('#f-followup').value, notes:$('#f-notes').value, updated:todayKey()};
+  if(id){ const i = S.clients.findIndex(x=>x.id===id); S.clients[i]=rec; }
+  else S.clients.push(rec);
+  save(); closeModal(); renderCRM(); toast(id?'Lead updated':'Lead added — now go call them');
+}
+
+/* ===== FOLLOW-UPS ===== */
+function renderFollowups(){
+  const due = S.clients.filter(c=>c.followup && !['Closed','Lost'].includes(c.status)).sort((a,b)=>a.followup<b.followup?-1:1);
+  const overdue = due.filter(c=>c.followup<todayKey());
+  const today = due.filter(c=>c.followup===todayKey());
+  const upcoming = due.filter(c=>c.followup>todayKey());
+  const section = (title, list, badgeCls) => list.length ? `
+    <div class="section-title">${title} <span class="badge ${badgeCls} no-dot">${list.length}</span></div>
+    <div class="grid g3">${list.map(c=>`
+      <div class="card hoverable">
+        <div class="flex between"><h3>${esc(c.name)}</h3><span class="badge ${statusBadge(c.status)}">${esc(c.status)}</span></div>
+        <div class="sm mut">${esc(c.owner||'')} ${c.phone?'· <span class="mono">'+esc(c.phone)+'</span>':''}</div>
+        <div class="xs mut mt">Due ${esc(c.followup)}${c.notes?' · '+esc(c.notes.slice(0,70)):''}</div>
+        <div class="flex mt wrap">
+          <button class="btn sm" onclick="event.stopPropagation();snooze('${c.id}',1)">+1 day</button>
+          <button class="btn sm" onclick="event.stopPropagation();snooze('${c.id}',7)">+1 week</button>
+          <button class="btn sm primary" onclick="event.stopPropagation();openClient('${c.id}')">Open</button>
+        </div>
+      </div>`).join('')}
+    </div>` : '';
+  $('#page-followups').innerHTML = `
+    <div class="card glass mb"><h3>${icon('bell',15)} Follow-up System</h3>
+      <p class="sm mut">Most closes happen on touch 3–5. This is where the money hides. Set a follow-up date on every lead — cards appear here automatically. Scripts for every situation are one tab away in <a href="#" onclick="go('templates');return false">Templates</a> and the <a href="#" onclick="go('coldcalling');return false">Academy</a>.</p>
+      <div class="chip-row">
+        <span class="chip on">Rhythm: day 2 → day 5 → day 12 → day 30 → graceful goodbye</span>
+        <span class="chip">Every touch adds value (a tip, a screenshot, a result) — never just "checking in"</span>
+      </div>
+    </div>
+    ${section('Overdue', overdue, 'b-red')}
+    ${section('Due today', today, 'b-amber')}
+    ${section('Upcoming', upcoming.slice(0,12), 'b-blue')}
+    ${due.length===0?`<div class="empty">${icon('bell',34)}<p>No follow-ups scheduled. Every active lead should have a date.<br>Open the CRM and give each one a next touch.</p></div>`:''}`;
+}
+function snooze(id, days){
+  const c = S.clients.find(x=>x.id===id);
+  const base = c.followup && c.followup>todayKey() ? new Date(c.followup) : new Date();
+  c.followup = new Date(base.getTime()+days*864e5).toISOString().slice(0,10);
+  save(); renderFollowups(); toast(`${c.name} → ${c.followup}`);
+}
+
+/* ===== MARKETING ===== */
+function renderMarketing(){
+  const total = MARKETING.reduce((a,c)=>a+c.ideas.length,0);
+  $('#page-marketing').innerHTML = `
+    <div class="card glass mb"><h3>${icon('megaphone',15)} Marketing Playbook — ${total} ideas</h3>
+      <p class="sm mut">Rule for year one: pick <strong>two</strong> channels, do them relentlessly for 90 days, measure, then decide. Agencies fail by doing twelve channels badly, not two channels well.</p>
+    </div>
+    ${MARKETING.map((c,i)=>`
+      <div class="acc ${i===0?'open':''}">
+        <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+          <h4>${esc(c.cat)}</h4><span class="badge b-grey no-dot">${c.ideas.length}</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+        </button>
+        <div class="acc-body"><ul>${c.ideas.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+      </div>`).join('')}`;
+}
+
+/* ===== LEAD GEN ===== */
+function renderLeads(){
+  $('#page-leads').innerHTML = `
+    <div class="card glass mb"><h3>${icon('search',15)} Lead Generation</h3>
+      <p class="sm mut">Every method that works for a local agency, ranked by difficulty and conversion. Start at the top; the table is roughly in order of return on effort. Dots: <span style="color:var(--green)">green = easy/high</span>, <span style="color:var(--amber)">amber = medium</span>, <span style="color:var(--red)">red = hard/low</span>.</p>
+    </div>
+    ${LEADGEN.map(m=>`
+      <div class="acc">
+        <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+          <h4>${esc(m.m)}</h4>
+          <span class="xs mut">Effort ${diffDots(m.diff)}</span>
+          <span class="xs mut">Conversion ${diffDots(4-m.conv)}</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+        </button>
+        <div class="acc-body"><p>${esc(m.how)}</p></div>
+      </div>`).join('')}`;
+}
+
+/* ===== NOTES ===== */
+const NOTE_COLORS = ['n-slate','n-blue','n-teal','n-amber','n-purple','n-pink'];
+function renderNotes(){
+  const notes = S.notes.slice().sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0) || b.ts-a.ts);
+  $('#page-notes').innerHTML = `
+    <div class="flex between wrap mb">
+      <div><h3 style="font-size:16px">${icon('note',15)} Notes</h3><p class="sm mut">Ideas, call notes, meeting scraps. Autosaves as you type.</p></div>
+      <div class="flex">${NOTE_COLORS.map(c=>`<button class="icon-btn" title="New ${c.slice(2)} note" onclick="addNote('${c}')"><span class="${c}" style="display:block;width:15px;height:15px;border-radius:5px;border:1px solid var(--line2)"></span></button>`).join('')}
+        <button class="btn primary sm" onclick="addNote()">${icon('plus',13)} New note</button></div>
+    </div>
+    ${notes.length ? `<div class="notes-grid">${notes.map(n=>`
+      <div class="note ${n.color} ${n.pinned?'pinned':''}">
+        <div class="note-head">
+          <button class="icon-btn" title="${n.pinned?'Unpin':'Pin'}" onclick="pinNote('${n.id}')" style="${n.pinned?'color:var(--amber)':''}">${icon('pin',13)}</button>
+          <button class="icon-btn" title="Delete" onclick="delNote('${n.id}')">${icon('trash',13)}</button>
+        </div>
+        <textarea placeholder="Write…" oninput="editNote('${n.id}',this.value)">${esc(n.text)}</textarea>
+        <div class="note-date">${new Date(n.ts).toLocaleDateString('en-AU',{day:'numeric',month:'short'})}${n.pinned?' · pinned':''}</div>
+      </div>`).join('')}</div>`
+    : `<div class="empty">${icon('note',34)}<p>Empty. First note idea: dump every business you can think of that needs a website.</p></div>`}`;
+}
+function addNote(color){
+  S.notes.push({id:uid(), text:'', color: color||NOTE_COLORS[S.notes.length%NOTE_COLORS.length], pinned:false, ts:Date.now()});
+  save(); renderNotes();
+  const ta = $('#page-notes .note textarea'); if(ta) ta.focus();
+}
+let noteTimer;
+function editNote(id, v){ const n=S.notes.find(x=>x.id===id); n.text=v; clearTimeout(noteTimer); noteTimer=setTimeout(save,400); }
+function pinNote(id){ const n=S.notes.find(x=>x.id===id); n.pinned=!n.pinned; save(); renderNotes(); }
+function delNote(id){ if(!confirm('Delete this note?'))return; S.notes=S.notes.filter(x=>x.id!==id); save(); renderNotes(); }
+
+/* ===== RESOURCES ===== */
+function renderResources(){
+  $('#page-resources').innerHTML = `
+    <div class="card glass mb"><h3>${icon('book',15)} Resource Library</h3>
+      <p class="sm mut">The toolbox. Everything free or nearly free — spend money on tools only after they've earned it.</p>
+      <input class="input mt" style="max-width:300px" placeholder="Filter resources…" oninput="$$('#resList .chk-res').forEach(el=>el.style.display=(!this.value||el.dataset.t.includes(this.value.toLowerCase()))?'':'none')">
+    </div>
+    <div id="resList" class="grid g2">${RESOURCES.map(c=>`
+      <div class="card hoverable">
+        <h3>${esc(c.cat)}</h3>
+        ${c.items.map(([n,d])=>`<div class="chk-res" data-t="${esc((n+' '+d).toLowerCase())}" style="padding:7px 0;border-bottom:1px solid var(--line)">
+          <strong class="sm">${esc(n)}</strong><div class="xs mut">${esc(d)}</div></div>`).join('')}
+      </div>`).join('')}
+    </div>`;
+}
+
+/* ===== TEMPLATES ===== */
+function renderTemplates(){
+  const kinds = {call:['Phone','b-blue'], email:['Email','b-teal'], text:['Text','b-green'], doc:['Document','b-purple']};
+  $('#page-templates').innerHTML = `
+    <div class="card glass mb"><h3>${icon('copy',15)} Templates</h3>
+      <p class="sm mut">Copy, personalise the [BRACKETS], send. If you write something twice, it belongs here — templates are how two people run like ten.</p>
+    </div>
+    ${TEMPLATES.map((t,i)=>`
+      <div class="acc">
+        <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+          <h4>${esc(t.t)}</h4><span class="badge ${kinds[t.k][1]} no-dot">${kinds[t.k][0]}</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${I.arrow}</svg>
+        </button>
+        <div class="acc-body">
+          <div class="script-block">${esc(t.body)}<button class="btn sm ghost copy-btn" onclick="copyText(TEMPLATES[${i}].body,'Template copied — personalise the brackets!')">${icon('copy',12)} Copy</button></div>
+        </div>
+      </div>`).join('')}`;
+}
+
+/* ===== FINANCE ===== */
+function renderFinance(){
+  const E = S.finance.entries;
+  const inc = E.filter(e=>e.type==='income').reduce((a,e)=>a+ +e.amount,0);
+  const exp = E.filter(e=>e.type==='expense').reduce((a,e)=>a+ +e.amount,0);
+  const now = new Date();
+  const mIn = E.filter(e=>e.type==='income'&&new Date(e.date).getMonth()===now.getMonth()&&new Date(e.date).getFullYear()===now.getFullYear()).reduce((a,e)=>a+ +e.amount,0);
+  const mrr = E.filter(e=>e.type==='income'&&e.recurring).reduce((a,e)=>a+ +e.amount,0);
+  const closedDeals = S.clients.filter(c=>c.status==='Closed').length;
+  const avgDeal = closedDeals? Math.round(inc/Math.max(closedDeals,1)) : 0;
+  // last 6 months bars
+  const months = [...Array(6)].map((_,i)=>{ const d=new Date(now.getFullYear(),now.getMonth()-5+i,1);
+    const v = E.filter(e=>e.type==='income'&&new Date(e.date).getMonth()===d.getMonth()&&new Date(e.date).getFullYear()===d.getFullYear()).reduce((a,e)=>a+ +e.amount,0);
+    return {l:d.toLocaleDateString('en-AU',{month:'short'}), v}; });
+  const maxM = Math.max(...months.map(m=>m.v),1);
+  $('#page-finance').innerHTML = `
+    <div class="grid g4">
+      <div class="card stat hoverable"><div class="k">Total income</div><div class="v" style="color:var(--green)">${fmt$(inc)}</div></div>
+      <div class="card stat hoverable"><div class="k">Total expenses</div><div class="v" style="color:var(--red)">${fmt$(exp)}</div></div>
+      <div class="card stat hoverable"><div class="k">Profit</div><div class="v">${fmt$(inc-exp)}</div><div class="d">Set aside 30% of income for tax: ${fmt$(inc*.3)}</div></div>
+      <div class="card stat hoverable"><div class="k">This month</div><div class="v">${fmt$(mIn)}</div>${bar(pct(mIn,S.goals.monthlyRevenue))}</div>
+    </div>
+    <div class="grid g4 mt">
+      <div class="card stat hoverable"><div class="k">Recurring (care plans)</div><div class="v" style="color:var(--acc2)">${fmt$(mrr)}<span class="unit">/mo</span></div><div class="d">The number that makes the agency unkillable</div></div>
+      <div class="card stat hoverable"><div class="k">Deals closed</div><div class="v">${closedDeals}</div></div>
+      <div class="card stat hoverable"><div class="k">Avg deal value</div><div class="v">${fmt$(avgDeal)}</div><div class="d">Raise prices every 3 closes</div></div>
+      <div class="card stat hoverable"><div class="k">Est. client LTV</div><div class="v">${fmt$(closedDeals ? Math.round(avgDeal + (mrr/closedDeals)*24) : 0)}</div><div class="d">deal + ~24 months of care plan</div></div>
+    </div>
+    <div class="grid g2 mt">
+      <div class="card hoverable">
+        <h3>Income — last 6 months</h3>
+        <div class="spark mt" style="height:110px">${months.map(m=>`<i style="height:${Math.max(4,m.v/maxM*100)}%" title="${m.l}: ${fmt$(m.v)}"></i>`).join('')}</div>
+        <div class="flex between xs mut" style="margin-top:6px">${months.map(m=>`<span>${m.l}</span>`).join('')}</div>
+      </div>
+      <div class="card">
+        <h3>Add entry</h3>
+        <div class="modal .row2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <select class="input" id="fin-type"><option value="income">Income</option><option value="expense">Expense</option></select>
+          <input class="input" id="fin-amount" type="number" placeholder="Amount ($)">
+          <input class="input" id="fin-label" placeholder="Label (e.g. Smith Plumbing website)" style="grid-column:span 2">
+          <input class="input" id="fin-date" type="date" value="${todayKey()}">
+          <label class="flex sm mut" style="gap:8px"><input type="checkbox" id="fin-rec"> Recurring monthly</label>
+        </div>
+        <button class="btn primary mt" onclick="addFin()">${icon('plus',13)} Add</button>
+      </div>
+    </div>
+    <div class="card mt">
+      <div class="flex between"><h3>Ledger</h3><span class="sm mut">${E.length} entries</span></div>
+      ${E.length ? `<table class="tbl"><thead><tr><th>Date</th><th>Label</th><th>Type</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>
+        ${E.slice().sort((a,b)=>b.date<a.date?-1:1).map(e=>`<tr>
+          <td class="mono xs mut">${esc(e.date)}</td><td>${esc(e.label)}${e.recurring?' <span class="badge b-teal no-dot">recurring</span>':''}</td>
+          <td><span class="badge ${e.type==='income'?'b-green':'b-red'}">${e.type}</span></td>
+          <td class="mono" style="text-align:right;color:${e.type==='income'?'var(--green)':'var(--red)'}">${e.type==='income'?'+':'−'}${fmt$(e.amount)}</td>
+          <td style="text-align:right"><button class="icon-btn" onclick="S.finance.entries=S.finance.entries.filter(x=>x.id!=='${e.id}');save();renderFinance()">${icon('trash',13)}</button></td>
+        </tr>`).join('')}</tbody></table>`
+      : `<div class="empty">${icon('dollar',30)}<p>No entries. The habit that keeps agencies alive: log every dollar the day it moves.</p></div>`}
+    </div>`;
+}
+function addFin(){
+  const amt = +$('#fin-amount').value;
+  if(!amt || !$('#fin-label').value.trim()) return toast('Amount and label required');
+  S.finance.entries.push({id:uid(), type:$('#fin-type').value, amount:amt, label:$('#fin-label').value.trim(), date:$('#fin-date').value||todayKey(), recurring:$('#fin-rec').checked});
+  save(); renderFinance(); toast('Entry added');
+}
+
+/* ===== MOTIVATION ===== */
+const MILESTONES = [
+['First cold call made','A coffee from the good café'],
+['First demo presented','Burgers on the business'],
+['FIRST DEAL CLOSED 🎉','Proper dinner out — frame the invoice'],
+['First $5k month','New gear fund unlocked'],
+['10 clients on the books','Weekend away'],
+['First $10k month','That mod on the X5 you\'ve been eyeing'],
+['20 care plans (rent covered by recurring)','Take a full week off — the machine runs'],
+['First $20k month','Dream income. Set the next one.'],
+];
+function renderMotivation(){
+  const st = bizStats();
+  const daysWorked = Object.values(S.daily).filter(d=>d.worked).length;
+  const q = QUOTES[(new Date().getDate()+3) % QUOTES.length];
+  $('#page-motivation').innerHTML = `
+    <div class="card glass mb" style="text-align:center;padding:34px 20px">
+      <div class="xs" style="letter-spacing:.2em;text-transform:uppercase;color:var(--dim)">Why we're doing this</div>
+      <p style="font-size:19px;font-weight:650;max-width:640px;margin:12px auto;letter-spacing:-.01em" id="whyText" contenteditable="true"
+        onblur="S.goals.why=this.textContent.trim();save();toast('Why updated')">${esc(S.goals.why)}</p>
+      <div class="xs mut">(click to edit — read it before every call block)</div>
+    </div>
+    <div class="grid g4">
+      <div class="card stat hoverable"><div class="k">${icon('flame',12)} Streak</div><div class="v">${S.streak.count}<span class="unit"> days</span></div><div class="d">Days in a row you showed up</div></div>
+      <div class="card stat hoverable"><div class="k">Days worked</div><div class="v">${daysWorked}</div></div>
+      <div class="card stat hoverable"><div class="k">Calls made (all-time)</div><div class="v">${st.totalCalls}</div><div class="d">Every no is a step to a yes</div></div>
+      <div class="card stat hoverable"><div class="k">Deals closed</div><div class="v">${st.closed}</div></div>
+    </div>
+    <div class="grid g2 mt">
+      <div class="card hoverable">
+        <h3>Goals</h3>
+        ${[['Daily calls','dailyCalls'],['Weekly calls','weeklyCalls'],['Weekly demos','weeklyDemos'],['Monthly revenue ($)','monthlyRevenue'],['Dream monthly income ($)','dreamIncome']].map(([l,k])=>`
+          <div class="flex between" style="padding:7px 0;border-bottom:1px solid var(--line)">
+            <span class="sm">${l}</span>
+            <input class="input mono" style="width:110px;text-align:right;padding:5px 9px" type="number" value="${S.goals[k]}" onchange="S.goals['${k}']=+this.value;save();toast('Goal updated')">
+          </div>`).join('')}
+        <div class="sm mut mt">Dream income progress: ${fmt$(st.monthIncome)} / ${fmt$(S.goals.dreamIncome)}</div>
+        ${bar(pct(st.monthIncome,S.goals.dreamIncome))}
+      </div>
+      <div class="card hoverable">
+        <h3>Reward milestones</h3>
+        <p class="sm mut">Celebrate on purpose. Tick them as they fall — and actually take the reward.</p>
+        ${MILESTONES.map((m,i)=>`
+          <div class="chk ${S.milestones[i]?'done':''}" onclick="S.milestones[${i}]=!S.milestones[${i}];if(!S.milestones[${i}])delete S.milestones[${i}];save();renderMotivation();">
+            <span class="box"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <span class="txt">${esc(m[0])}<span class="why">Reward: ${esc(m[1])}</span></span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card quote-card hoverable mt"><p>“${q[0]}”</p><div class="qa">— ${q[1]}</div></div>`;
+}
+</script>
+<script>
+/* ===== NAVIGATION & ROUTER ===== */
+const NAV = [
+  {group:'Operate', items:[
+    ['dashboard','Dashboard','home'],
+    ['checklist','Business Checklist','check'],
+    ['finance','Finance','dollar'],
+  ]},
+  {group:'Sell', items:[
+    ['coldcalling','Cold Calling Academy','phone'],
+    ['sales','Sales System','target'],
+    ['crm','Clients & Pipeline','users'],
+    ['followups','Follow-Ups','bell'],
+  ]},
+  {group:'Build', items:[
+    ['build','Website Workflow','layers'],
+    ['audit','Website Audit','clipboard'],
+    ['templates','Templates','copy'],
+  ]},
+  {group:'Grow', items:[
+    ['leads','Lead Generation','search'],
+    ['marketing','Marketing Ideas','megaphone'],
+    ['lessons','Startup Lessons','bulb'],
+  ]},
+  {group:'Fuel', items:[
+    ['notes','Notes','note'],
+    ['resources','Resources','book'],
+    ['motivation','Motivation','flame'],
+  ]},
+];
+const PAGE_TITLES = {}; NAV.forEach(g=>g.items.forEach(([id,label])=>PAGE_TITLES[id]=label));
+const RENDER = {dashboard:renderDashboard, checklist:renderChecklist, coldcalling:renderColdCalling,
+  sales:renderSales, build:renderBuild, audit:renderAudit, crm:renderCRM, followups:renderFollowups,
+  marketing:renderMarketing, leads:renderLeads, notes:renderNotes, resources:renderResources,
+  templates:renderTemplates, lessons:renderLessons, finance:renderFinance, motivation:renderMotivation};
+let currentPage = 'dashboard';
+
+function followupsDueCount(){
+  return S.clients.filter(c=>c.followup && c.followup<=todayKey() && !['Closed','Lost'].includes(c.status)).length;
+}
+function renderNav(){
+  const due = followupsDueCount();
+  $('#nav').innerHTML = NAV.map(g=>`
+    <div class="nav-group">${g.group}</div>
+    ${g.items.map(([id,label,ic])=>`
+      <a class="nav-item ${currentPage===id?'active':''}" href="#" onclick="go('${id}');return false">
+        ${icon(ic,16)}<span>${label}</span>
+        ${id==='followups'&&due?`<span class="nav-count">${due}</span>`:''}
+      </a>`).join('')}`).join('');
+}
+function go(page){
+  if(!RENDER[page]) return;
+  currentPage = page;
+  $$('.page').forEach(p=>p.classList.remove('active'));
+  RENDER[page]();                       // render fresh (data may have changed)
+  $('#page-'+page).classList.add('active');
+  $('#pageTitle').textContent = PAGE_TITLES[page];
+  renderNav();
+  window.scrollTo({top:0});
+  $('#sidebar').classList.remove('open'); // close mobile drawer
+}
+
+/* ===== COMMAND PALETTE (⌘K) ===== */
+const ACTIONS = [
+  ['Log a call', 'phone', ()=>{ logCall(); if(currentPage==='dashboard') renderDashboard(); }],
+  ['Log a demo', 'target', ()=>{ logDemo(); if(currentPage==='dashboard') renderDashboard(); }],
+  ['Add a new lead', 'plus', ()=>{ go('crm'); openClient(); }],
+  ['New note', 'note', ()=>{ go('notes'); addNote(); }],
+  ['Add income / expense', 'dollar', ()=>go('finance')],
+  ['Start a website audit', 'clipboard', ()=>go('audit')],
+];
+let cmdkIndex = 0, cmdkHits = [];
+function openCmdk(){
+  closeModal();
+  const items = [
+    ...NAV.flatMap(g=>g.items.map(([id,label,ic])=>({t:label, ic, hint:'Go to', run:()=>go(id)}))),
+    ...ACTIONS.map(([t,ic,run])=>({t, ic, hint:'Action', run})),
+  ];
+  $('#cmdkRoot').innerHTML = `
+    <div class="cmdk" id="cmdkVeil">
+      <div class="cmdk-box">
+        <div class="cmdk-input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input id="cmdkInput" placeholder="Search pages and actions…" autocomplete="off" spellcheck="false">
+          <kbd>esc</kbd>
+        </div>
+        <div class="cmdk-list" id="cmdkList"></div>
+      </div>
+    </div>`;
+  $('#cmdkVeil').addEventListener('mousedown', e=>{ if(e.target.id==='cmdkVeil') closeCmdk(); });
+  const input = $('#cmdkInput');
+  const paint = () => {
+    const q = input.value.trim().toLowerCase();
+    cmdkHits = items.filter(x=>x.t.toLowerCase().includes(q));
+    cmdkIndex = clamp(cmdkIndex, 0, Math.max(cmdkHits.length-1, 0));
+    $('#cmdkList').innerHTML = cmdkHits.length
+      ? `<div class="cmdk-label">${q?'Results':'Jump to'}</div>` + cmdkHits.map((x,i)=>`
+        <div class="cmdk-item ${i===cmdkIndex?'sel':''}" onclick="cmdkHits[${i}].run();closeCmdk()"
+             onmouseenter="cmdkIndex=${i};[...this.parentElement.querySelectorAll('.cmdk-item')].forEach((e,j)=>e.classList.toggle('sel',e===this))">
+          ${icon(x.ic,15)}<span>${esc(x.t)}</span><span class="hint">${x.hint}</span>
+        </div>`).join('')
+      : `<div class="cmdk-empty">Nothing matches "${esc(input.value)}"</div>`;
+  };
+  input.addEventListener('input', ()=>{ cmdkIndex=0; paint(); });
+  input.addEventListener('keydown', e=>{
+    if(e.key==='ArrowDown'){ e.preventDefault(); cmdkIndex=clamp(cmdkIndex+1,0,cmdkHits.length-1); paint(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); cmdkIndex=clamp(cmdkIndex-1,0,cmdkHits.length-1); paint(); }
+    else if(e.key==='Enter' && cmdkHits[cmdkIndex]){ cmdkHits[cmdkIndex].run(); closeCmdk(); }
+  });
+  paint();
+  requestAnimationFrame(()=>input.focus());
+}
+function closeCmdk(){ $('#cmdkRoot').innerHTML=''; }
+
+/* ===== GLOBAL KEYBOARD SHORTCUTS ===== */
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){
+    e.preventDefault();
+    $('#cmdkRoot').children.length ? closeCmdk() : openCmdk();
+    return;
+  }
+  if(e.key==='Escape'){ closeCmdk(); closeModal(); return; }
+  const tag = (e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||e.target.isContentEditable) return;
+  if(/^[1-9]$/.test(e.key)){
+    const order = NAV.flatMap(g=>g.items.map(x=>x[0]));
+    const p = order[+e.key-1];
+    if(p) go(p);
+  }
+});
+
+/* ===== TOPBAR / SHELL WIRING ===== */
+$('#searchBtn').addEventListener('click', openCmdk);
+$('#menuBtn').addEventListener('click', e=>{ e.stopPropagation(); $('#sidebar').classList.toggle('open'); });
+document.addEventListener('click', e=>{           // tap outside closes mobile drawer
+  const sb = $('#sidebar');
+  if(sb.classList.contains('open') && !sb.contains(e.target) && e.target.id!=='menuBtn' && !e.target.closest('#menuBtn'))
+    sb.classList.remove('open');
+});
+$('#todayDate').textContent = new Date().toLocaleDateString('en-AU',{weekday:'long', day:'numeric', month:'long', year:'numeric'});
+$('#streakNum').textContent = S.streak.count;
+document.querySelector('#streakPill .lbl').textContent = S.streak.count===1 ? 'day streak' : 'day streak';
+
+/* ===== BOOT ===== */
+go('dashboard');
+if(!S.seeded){
+  S.seeded = true; save();
+  setTimeout(()=>toast('Welcome to Northside HQ — press ⌘K to fly around'), 700);
+}
+</script>
+</body>
+</html>
