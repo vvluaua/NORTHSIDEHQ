@@ -461,7 +461,10 @@ const defaultState = () => ({
 let S;
 try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); }
 catch(e){ S = defaultState(); }
-const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e){ console.warn('Save failed', e); } };
+const save = () => {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch(e){ console.warn('Save failed', e); }
+  if (window.__cloudSave) window.__cloudSave();   // push to Firebase when sync is set up
+};
 
 const todayKey = () => new Date().toISOString().slice(0,10);
 const day = () => { if(!S.daily[todayKey()]) S.daily[todayKey()] = {calls:0, demos:0, meetings:0, worked:true}; return S.daily[todayKey()]; };
@@ -1887,5 +1890,109 @@ if(!S.seeded){
   setTimeout(()=>toast('Welcome to Northside HQ — press ⌘K to fly around'), 700);
 }
 </script>
+
+<!-- ============================================================
+     CLOUD SYNC (Firebase Firestore) — makes the app shared + live
+     between you and your mate on any device.
+
+     SETUP (one time):
+       1. Paste your Firebase config into FIREBASE_CONFIG below
+          (from Firebase console → Project settings → Your apps).
+       2. Leave everything else alone.
+     If FIREBASE_CONFIG is still the placeholder, the app simply
+     runs local-only like before — nothing breaks.
+     ============================================================ -->
+<script type="module">
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyACeYLda231j5k2A1yu-brW0HT3GMd9ViM",
+  authDomain: "northside-hq.firebaseapp.com",
+  projectId: "northside-hq",
+  storageBucket: "northside-hq.firebasestorage.app",
+  messagingSenderId: "342299040004",
+  appId: "1:342299040004:web:3ed38e8bf1ec1a1fafd851"
+};
+
+// Bail out gracefully if not configured yet → app stays local-only.
+if (!FIREBASE_CONFIG.apiKey.includes('PASTE')) {
+  try {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+    const { getFirestore, doc, setDoc, onSnapshot } =
+      await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+
+    // ---- Team code: acts as the shared "room" + password. ----
+    let code = localStorage.getItem('northside_team_code');
+    while (!code) {
+      code = (prompt('Enter your Northside team code (same code as your mate):') || '').trim();
+      if (code && code.length < 8) { alert('Make it at least 8 characters — it doubles as the password.'); code = ''; }
+    }
+    localStorage.setItem('northside_team_code', code);
+
+    const db  = getFirestore(initializeApp(FIREBASE_CONFIG));
+    const ref = doc(db, 'hq', code);
+    const ME  = Math.random().toString(36).slice(2);   // identifies this browser tab
+    let lastPushed = '';
+    let pushTimer  = null;
+
+    // Small status dot in the topbar so you can see sync state.
+    const pill = document.getElementById('streakPill');
+    const dot = document.createElement('span');
+    dot.id = 'syncDot';
+    dot.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);margin-left:10px';
+    dot.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block"></span>connecting…';
+    pill.parentElement.insertBefore(dot, pill);
+    const setDot = (color, label) => {
+      dot.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:var(--${color});display:inline-block"></span>${label}`;
+    };
+
+    // ---- PUSH: whenever save() runs, write state to the cloud (debounced). ----
+    window.__cloudSave = () => {
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(async () => {
+        try {
+          const data = JSON.stringify(S);
+          if (data === lastPushed) return;
+          lastPushed = data;
+          await setDoc(ref, { data, by: ME, ts: Date.now() });
+          setDot('green', 'synced');
+        } catch (e) { console.warn('Cloud save failed', e); setDot('red', 'offline'); }
+      }, 700);
+    };
+
+    // ---- PULL: live-adopt the other person's changes. ----
+    const userIsTyping = () => {
+      const t = document.activeElement;
+      return document.getElementById('veil') ||                             // modal open
+             (t && (/^(input|textarea|select)$/i.test(t.tagName) || t.isContentEditable));
+    };
+    let pendingRemote = null;
+    const adopt = (raw) => {
+      if (userIsTyping()) { pendingRemote = raw; return; }   // don't stomp mid-edit
+      pendingRemote = null;
+      lastPushed = raw;
+      S = Object.assign(defaultState(), JSON.parse(raw));
+      localStorage.setItem(STORE_KEY, raw);
+      go(currentPage);                                        // re-render what's on screen
+      setDot('green', 'synced');
+    };
+    document.addEventListener('focusout', () => {             // apply deferred update after editing
+      setTimeout(() => { if (pendingRemote && !userIsTyping()) adopt(pendingRemote); }, 400);
+    });
+
+    onSnapshot(ref, snap => {
+      if (!snap.exists()) {                                   // first person in: seed the cloud
+        window.__cloudSave();
+        setDot('green', 'synced');
+        return;
+      }
+      const d = snap.data();
+      if (d.by === ME) return;                                // our own write echoing back
+      if (d.data && d.data !== JSON.stringify(S)) adopt(d.data);
+      else setDot('green', 'synced');
+    }, err => { console.warn('Sync error', err); setDot('red', 'sync error'); });
+
+  } catch (e) { console.warn('Firebase failed to load — running local-only.', e); }
+}
+</script>
+
 </body>
 </html>
